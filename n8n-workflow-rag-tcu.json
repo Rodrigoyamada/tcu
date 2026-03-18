@@ -1,0 +1,260 @@
+{
+    "name": "RAG TCU - Parecer Técnico",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "rag-tcu",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "node-webhook",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "claude-opus-4-5",
+                "messages": {
+                    "messageType": "defineBelow",
+                    "message": [
+                        {
+                            "role": "system",
+                            "content": "Você é um especialista em pesquisa de jurisprudência do Tribunal de Contas da União (TCU).\n\nReceba a descrição de um problema jurídico e retorne APENAS um JSON com termos de busca otimizados para encontrar acórdãos, súmulas e informativos do TCU relacionados ao tema.\n\nRetorne SOMENTE este JSON, sem explicações:\n{\n  \"termos\": [\"termo1\", \"termo2\", \"termo3\"],\n  \"query_ilike\": \"termo_principal\"\n}\n\nRegras:\n- termos: lista de 3 a 5 palavras-chave jurídicas relevantes (sem stopwords, sem artigos)\n- query_ilike: a MELHOR palavra-chave única para busca por substring no banco de dados\n- Use termos técnicos do direito administrativo e controle externo\n- Priorize termos que TCU usaria em seus acórdãos"
+                        },
+                        {
+                            "role": "user",
+                            "content": "Problema:\nTítulo: {{ $json.body.titulo }}\n{{ $json.body.problema }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "node-agente1",
+            "name": "Agente 1 - Query Reformulator",
+            "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+            "typeVersion": 1.3,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extrai texto da resposta do Agente 1 (compativel com AI Agent e lmChatAnthropic)\nconst agentOutput = $input.first().json\nlet texto = ''\nif (agentOutput.output && typeof agentOutput.output === 'string') {\n  texto = agentOutput.output  // Formato AI Agent do N8n\n} else if (Array.isArray(agentOutput.content)) {\n  texto = agentOutput.content.filter(c => c.type === 'text').map(c => c.text).join('\\n')\n} else if (agentOutput.text) {\n  texto = agentOutput.text\n} else {\n  texto = JSON.stringify(agentOutput)\n}\n\nlet queryData = { termos: [], query_ilike: '' }\ntry {\n  const limpo = texto.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim()\n  const match = limpo.match(/\\{[\\s\\S]*\\}/)\n  if (match) queryData = JSON.parse(match[0])\n} catch(e) {\n  const stopwords = new Set(['posso','para','como','que','uma','dos','das','ser','pode','qual','nao','com','por','isso'])\n  const problema = $('Webhook').first().json.body.problema || ''\n  const palavras = problema.toLowerCase().replace(/[^a-z\\s]/g,' ').split(/\\s+/).filter(w => w.length >= 5 && !stopwords.has(w)).slice(0,3)\n  queryData = { termos: palavras, query_ilike: palavras[0] || 'contrato' }\n}\n\nreturn [{\n  json: {\n    ...queryData,\n    titulo: $('Webhook').first().json.body.titulo,\n    problema: $('Webhook').first().json.body.problema,\n    descricao: $('Webhook').first().json.body.descricao,\n    user: $('Webhook').first().json.body.user,\n    parecer_id: $('Webhook').first().json.body.parecer_id\n  }\n}]"
+            },
+            "id": "node-parse-query",
+            "name": "Formatar Query",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                720,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/rpc/search_jurisprudencia",
+                "sendHeaders": true,
+                "specifyHeaders": "keypair",
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "sb_publishable_-XDy8m1iTYXlf-hayQzgTQ_agv5OggW"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer sb_publishable_-XDy8m1iTYXlf-hayQzgTQ_agv5OggW"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ query: $json.query_ilike }) }}",
+                "options": {}
+            },
+            "id": "node-supabase-search",
+            "name": "Buscar no Supabase",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                960,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Formata os resultados do Supabase para o Agente 2\nconst resultados = $input.all()\nconst queryNode = $('Formatar Query').first().json\n\nlet contexto = ''\nlet totalEncontrado = 0\n\nif (resultados && resultados.length > 0) {\n  const docs = Array.isArray(resultados[0].json) ? resultados[0].json : []\n  totalEncontrado = docs.length\n  \n  if (docs.length > 0) {\n    contexto = docs.map((doc, i) => {\n      const tipo = (doc.tipo || 'DOCUMENTO').toUpperCase()\n      const numero = doc.numero || ''\n      const orgao = doc.orgao || ''\n      const data = doc.data_pub || ''\n      const texto = doc.conteudo || doc.ementa || ''\n      const url = doc.url || ''\n      \n      return `[${i+1}] ${tipo} ${numero}\\nÓrgão: ${orgao} | Data: ${data}${url ? ' | URL: ' + url : ''}\\n\\n${texto.substring(0, 2000)}${texto.length > 2000 ? '...' : ''}`\n    }).join('\\n\\n---\\n\\n')\n  }\n}\n\nreturn [{\n  json: {\n    problema: queryNode.problema,\n    titulo: queryNode.titulo,\n    descricao: queryNode.descricao,\n    user: queryNode.user,\n    parecer_id: queryNode.parecer_id,\n    termos_buscados: queryNode.termos,\n    total_encontrado: totalEncontrado,\n    contexto_jurisprudencia: contexto\n  }\n}]"
+            },
+            "id": "node-formatar-contexto",
+            "name": "Formatar Contexto",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "claude-opus-4-5",
+                "messages": {
+                    "messageType": "defineBelow",
+                    "message": [
+                        {
+                            "role": "system",
+                            "content": "Você é um especialista em direito público e controle externo, com vasta experiência na jurisprudência do Tribunal de Contas da União (TCU).\n\nSua tarefa é elaborar um PARECER TÉCNICO fundamentado e estruturado com base:\n1. Na questão jurídica descrita pelo usuário\n2. Na jurisprudência do TCU fornecida no contexto\n\nESTRUTURA OBRIGATÓRIA DO PARECER:\n\n## PARECER TÉCNICO\n**Referência:** [Título do processo]\n\n---\n\n## 1. RELATÓRIO\n[Breve relato da questão apresentada]\n\n## 2. ANÁLISE\n[Análise jurídica fundamentada, citando os acórdãos e súmulas do TCU encontrados]\n\n## 3. JURISPRUDÊNCIA APLICÁVEL\n[Liste os principais precedentes TCU citados, com número e órgão]\n\n## 4. CONCLUSÃO\n[Resposta objetiva à questão, com fundamento nos precedentes]\n\n---\n*Parecer elaborado com base na jurisprudência do TCU disponível na base de dados.*\n\nREGRAS:\n- Cite os acórdãos pelo número e órgão (ex: Acórdão 1234/2023 - Plenário)\n- Seja objetivo e técnico\n- Se não houver jurisprudência suficiente, indique isso e elabore com base nos princípios gerais\n- Use linguagem formal e jurídica"
+                        },
+                        {
+                            "role": "user",
+                            "content": "=**Título:** {{ $json.titulo }}\n\n**Problema/Questão:**\n{{ $json.problema }}\n\n---\n\n{{ $json.total_encontrado > 0 ? '**Jurisprudência TCU encontrada (' + $json.total_encontrado + ' documentos):**\\n\\n' + $json.contexto_jurisprudencia : 'Nenhum acórdão específico foi encontrado na base de dados para os termos: ' + $json.termos_buscados.join(', ') + '. Elabore o parecer com base no seu conhecimento geral da jurisprudência do TCU.' }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "node-agente2",
+            "name": "Agente 2 - Parecerista",
+            "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+            "typeVersion": 1.3,
+            "position": [
+                1440,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extrai texto do parecer (compativel com AI Agent e Anthropic direto)\nconst resposta = $input.first().json\nlet parecer = ''\nif (resposta.output && typeof resposta.output === 'string') {\n  parecer = resposta.output  // Formato AI Agent\n} else if (Array.isArray(resposta.content)) {\n  parecer = resposta.content.filter(c => c.type === 'text').map(c => c.text).join('\\n')\n} else if (resposta.text) {\n  parecer = resposta.text\n} else {\n  parecer = JSON.stringify(resposta)\n}\nreturn [{ json: { output: parecer } }]"
+            },
+            "id": "node-extrair-parecer",
+            "name": "Extrair Parecer",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ output: $json.output }) }}",
+                "options": {
+                    "responseHeaders": {
+                        "entries": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "name": "Access-Control-Allow-Origin",
+                                "value": "*"
+                            }
+                        ]
+                    }
+                }
+            },
+            "id": "node-respond",
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1920,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Agente 1 - Query Reformulator",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Agente 1 - Query Reformulator": {
+            "main": [
+                [
+                    {
+                        "node": "Formatar Query",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Formatar Query": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar no Supabase",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar no Supabase": {
+            "main": [
+                [
+                    {
+                        "node": "Formatar Contexto",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Formatar Contexto": {
+            "main": [
+                [
+                    {
+                        "node": "Agente 2 - Parecerista",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Agente 2 - Parecerista": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair Parecer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair Parecer": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}
