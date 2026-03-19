@@ -1,0 +1,219 @@
+{
+  "name": "RAG TCU - Parecer Técnico",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rag-tcu",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fa568de7-c9aa-4be9-acfa-cc2fd9bf163b",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "ae610e15-6290-4764-868c-7f8ee425ebb9"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\n\nreturn [{\n  json: {\n    titulo:    body.titulo    || 'Não informado',\n    problema:  body.problema  || body.descricao || 'Não informado',\n    descricao: body.descricao || '',\n    user:      body.user      || '',\n    parecer_id: body.parecer_id || '',\n    total_encontrado: 0,\n    jurisprudencias: []\n  }\n}];"
+      },
+      "id": "7d2fb73d-5372-4bac-8ca5-281924d63d7b",
+      "name": "Normalizar Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.problema }}",
+        "options": {
+          "systemMessage": "### EXTRATOR DE TERMOS JURÍDICOS ###\n\nVocê é um módulo de processamento de linguagem natural especializado em extração de termos jurídicos para otimização de consultas em bancos de dados.\n\nRetorne APENAS um JSON válido. Sem explicações. Sem markdown. Sem texto extra.\n\nFormato de saída:\n{\n  \"domain\": \"string\",\n  \"query_ilike\": \"string\",\n  \"termos\": [\"string\", \"string\", \"string\"],\n  \"confidence\": 0.0,\n  \"version\": \"1.2\"\n}\n\nRegras:\n1. domain: área jurídica mais ampla (ex: licitacao, contrato_publico, servidor_publico). Lowercase, sem acentos.\n2. query_ilike: termo mais específico para busca ILIKE no Supabase. Pode ser composto (ex: capital_social, registro_precos). Lowercase, sem acentos.\n3. termos: de 4 a 7 termos jurídicos complementares. Lowercase, sem acentos.\n4. confidence: float 0.0–1.0 indicando certeza da extração.\n5. version: sempre \"1.2\".\n6. Se o problema for vago, retorne: {\"domain\":\"indefinido\",\"query_ilike\":\"sem_termos_relevantes\",\"termos\":[\"analise_impossivel\"],\"confidence\":0.1,\"version\":\"1.2\"}\n\nPriorize termos de: requisitos de qualificacao, capacidade tecnica, registro de precos, inabilitacao, clausulas restritivas, sancoes administrativas."
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Agente 1 — Extrair Termos",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [460, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-5"
+      },
+      "id": "a1b2c3d4-llm1-0001-0001-000000000001",
+      "name": "LLM — Agente 1 (trocar modelo aqui)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [460, 200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "XJtM2su1qbhmFxu1",
+          "name": "Anthropic account"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "var r = $input.first().json;\nvar txt = '';\nif (r.text)    { txt = r.text; }\nelse if (r.output)                    { txt = r.output; }\nelse if (r.content && r.content[0])   { txt = r.content[0].text; }\nelse { txt = JSON.stringify(r); }\n\nvar s = txt.indexOf('{');\nvar e = txt.lastIndexOf('}');\nvar q = { termos: [], query_ilike: 'contrato', confidence: 0.5 };\nif (s > -1 && e > s) {\n  try { q = JSON.parse(txt.slice(s, e + 1)); } catch(err) {}\n}\n\nvar wb = $('Normalizar Input').first().json;\nreturn [{ json: {\n  query_ilike: q.query_ilike || 'contrato',\n  termos:      q.termos      || [],\n  confidence:  q.confidence  || 0.5,\n  domain:      q.domain      || '',\n  titulo:      wb.titulo,\n  problema:    wb.problema,\n  descricao:   wb.descricao,\n  user:        wb.user,\n  parecer_id:  wb.parecer_id\n}}];"
+      },
+      "id": "42300a58-930a-426b-8ce9-1305bf8c36ea",
+      "name": "Formatar Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 0]
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/rpc/search_jurisprudencia",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "query", "value": "={{ $json.query_ilike }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "14e6c831-2fa5-4e8c-ab37-e9127f2534e1",
+      "name": "Buscar no Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 0],
+      "alwaysOutputData": true
+    },
+
+    {
+      "parameters": {
+        "jsCode": "var resultados = $input.all();\nvar queryNode = $('Formatar Query').first().json;\n\nvar contexto = '';\nvar totalEncontrado = 0;\n\nif (resultados && resultados.length > 0) {\n  var docs = resultados.map(function(r) { return r.json; }).slice(0, 8);\n  totalEncontrado = docs.length;\n\n  contexto = docs.map(function(doc, i) {\n    var orgao    = doc.orgao    || '';\n    var numero   = doc.numero   || '';\n    var data     = doc.data_pub || '';\n    var ementa   = doc.ementa   || '';\n    var conteudo = doc.conteudo || '';\n    var referencia = conteudo.slice(-300);\n    return '[' + (i+1) + '] ' + numero + ' — ' + orgao + ' (' + data + ')\\nEmenta: ' + ementa + '\\nReferência: ' + referencia;\n  }).join('\\n\\n---\\n\\n');\n}\n\nreturn [{\n  json: {\n    problema:              queryNode.problema,\n    titulo:                queryNode.titulo,\n    descricao:             queryNode.descricao,\n    user:                  queryNode.user,\n    parecer_id:            queryNode.parecer_id,\n    termos_buscados:       queryNode.termos,\n    domain:                queryNode.domain,\n    confidence:            queryNode.confidence,\n    total_encontrado:      totalEncontrado,\n    contexto_jurisprudencia: contexto\n  }\n}];"
+      },
+      "id": "972ea061-5ddc-45fc-a9c4-57fcb16b3906",
+      "name": "Formatar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 0]
+    },
+
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=TÍTULO:\n{{ $json.titulo }}\n\nPROBLEMA:\n{{ $json.problema }}\n\nCONTEXTO JURISPRUDENCIAL ({{ $json.total_encontrado }} documentos encontrados):\n{{ $json.contexto_jurisprudencia }}",
+        "options": {
+          "systemMessage": "Como especialista sênior em Direito Administrativo, sua tarefa é elaborar um parecer técnico detalhado e objetivo. Este parecer deve ser construído exclusivamente com base nas informações jurídicas fornecidas no contexto. A estrita aderência ao contexto fornecido é mandatória, sendo vedada qualquer inferência ou uso de conhecimento externo.\n\nRegras Obrigatórias:\n- Não inventar acórdãos, súmulas, jurisprudência, boletins ou informativos.\n- Não utilizar conhecimento externo ao contexto fornecido.\n- Citar expressamente o número do acórdão, súmula ou decisão sempre que mencionar um entendimento.\n- Se o contexto for insuficiente, declare explicitamente a limitação.\n- Linguagem formal, objetiva e técnica. Sem opinião pessoal. Sem mencionar que é IA.\n\nEstrutura Obrigatória (utilize Markdown):\n\n# 1. RELATÓRIO\nSíntese objetiva do problema jurídico.\n\n# 2. FUNDAMENTAÇÃO\n## 2.1 Jurisprudência Aplicável\nAnálise dos entendimentos do TCU e jurisprudências relevantes do contexto.\n## 2.2 Análise do Caso Concreto\nAplicação dos entendimentos ao caso.\n\n# 3. CONCLUSÃO\nResposta objetiva: a conduta é permitida, vedada ou condicionada?"
+        }
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Agente 2 — Gerar Parecer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [1420, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-5"
+      },
+      "id": "a1b2c3d4-llm2-0002-0002-000000000002",
+      "name": "LLM — Agente 2 (trocar modelo aqui)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [1420, 200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "XJtM2su1qbhmFxu1",
+          "name": "Anthropic account"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "var r = $input.first().json;\nvar parecer = '';\nif (r.text)                          { parecer = r.text; }\nelse if (r.output)                   { parecer = r.output; }\nelse if (r.content && r.content[0])  { parecer = r.content[0].text; }\nelse { parecer = JSON.stringify(r); }\nreturn [{ json: { output: parecer } }];"
+      },
+      "id": "70161167-0f2b-46bc-ac7f-f57593909118",
+      "name": "Extrair Parecer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 0]
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ output: $json.output }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type",                "value": "application/json" },
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      },
+      "id": "2b796842-c522-46d3-9785-9b53c57b30aa",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1900, 0]
+    }
+  ],
+
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Normalizar Input", "type": "main", "index": 0 }]]
+    },
+    "Normalizar Input": {
+      "main": [[{ "node": "Agente 1 — Extrair Termos", "type": "main", "index": 0 }]]
+    },
+    "LLM — Agente 1 (trocar modelo aqui)": {
+      "ai_languageModel": [[{ "node": "Agente 1 — Extrair Termos", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Agente 1 — Extrair Termos": {
+      "main": [[{ "node": "Formatar Query", "type": "main", "index": 0 }]]
+    },
+    "Formatar Query": {
+      "main": [[{ "node": "Buscar no Supabase", "type": "main", "index": 0 }]]
+    },
+    "Buscar no Supabase": {
+      "main": [[{ "node": "Formatar Contexto", "type": "main", "index": 0 }]]
+    },
+    "Formatar Contexto": {
+      "main": [[{ "node": "Agente 2 — Gerar Parecer", "type": "main", "index": 0 }]]
+    },
+    "LLM — Agente 2 (trocar modelo aqui)": {
+      "ai_languageModel": [[{ "node": "Agente 2 — Gerar Parecer", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Agente 2 — Gerar Parecer": {
+      "main": [[{ "node": "Extrair Parecer", "type": "main", "index": 0 }]]
+    },
+    "Extrair Parecer": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+
+  "pinData": {},
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "f7a7be7f-c734-497b-bf06-af0b9cd9b4d1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "659c10ce91dda1bd1762bb0a7ad98f5737c2d03166dda8d31d013fa0439a9286"
+  },
+  "id": "acd_d20_HTwEaFErc8qMV",
+  "tags": []
+}
