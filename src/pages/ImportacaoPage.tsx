@@ -4,14 +4,13 @@ import Papa from 'papaparse'
 import {
     Upload, FileSpreadsheet, Check, X, Loader2,
     AlertCircle, ChevronDown, Info, Database, Trash2,
-    BookMarked, Sparkles, ChevronRight, Pencil,
+    BookMarked, Sparkles, ChevronRight, Pencil, Tag,
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { supabase, CATEGORIAS_TCU, type CategoriaTCU } from '../lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 const DB_FIELDS = [
-    { key: 'tipo', label: 'Tipo', required: true, hint: 'acordao | sumula | boletim | informativo' },
     { key: 'numero', label: 'Número', required: false, hint: 'Ex: Acórdão 1234/2023' },
     { key: 'relator', label: 'Relator', required: false, hint: 'Nome do relator' },
     { key: 'orgao', label: 'Órgão', required: false, hint: 'Ex: Plenário, 1ª Câmara' },
@@ -38,7 +37,6 @@ interface ImportProfile {
 
 function guessMapping(header: string): DbFieldKey {
     const h = header.toLowerCase().replace(/[^a-záéíóúâêôçã]/gi, '')
-    if (/^(tipo|key|classe|categoria|kind)$/.test(h)) return 'tipo'
     if (/numero|num|acordao|acordão|sumula|súmula|informativo|boletim/.test(h)) return 'numero'
     if (/relator|ministro/.test(h)) return 'relator'
     if (/orgao|órgão|colegiado|camara|câmara|plenario|plenário|tribunal/.test(h)) return 'orgao'
@@ -85,6 +83,7 @@ export default function ImportacaoPage() {
     const [step, setStep] = useState<Step>('upload')
     const [importError, setImportError] = useState('')
     const [progress, setProgress] = useState({ done: 0, total: 0, errors: 0 })
+    const [categoria, setCategoria] = useState<CategoriaTCU>('acordao')
 
     // Profile state
     const [profiles, setProfiles] = useState<ImportProfile[]>([])
@@ -209,14 +208,13 @@ export default function ImportacaoPage() {
         const BATCH = 50
 
         const mapped = rows.map((row) => {
-            const rec: Record<string, unknown> = {}
+            const rec: Record<string, unknown> = { tipo: categoria }
             for (const [col, field] of Object.entries(mapping)) {
                 if (field === '__skip') continue
                 const val = (row[col] ?? '').toString().trim()
                 if (!val) continue
                 rec[field] = field === 'data_pub' ? parseDate(val) : val
             }
-            if (!rec.tipo) rec.tipo = 'acordao'
             return rec
         }).filter(r => Object.keys(r).length > 0)
 
@@ -262,15 +260,13 @@ export default function ImportacaoPage() {
         setStep('upload'); setFileName(''); setHeaders([]); setRows([])
         setMapping({}); setProgress({ done: 0, total: 0, errors: 0 })
         setImportError(''); setSuggestedProfile(null); setSaveProfileName('')
-        setProfileSaved(false)
+        setProfileSaved(false); setCategoria('acordao')
         if (fileInputRef.current) fileInputRef.current.value = ''
     }
 
     // ── Render helpers ─────────────────────────────────────────────────────────
 
-    const stepOrder: Step[] = ['upload', 'confirm', 'map', 'importing', 'done']
     const stepLabels = ['1. Arquivo', '2. Colunas', '3. Importando', '4. Concluído']
-    const activeIdx = stepOrder.indexOf(step === 'save-profile' ? 'confirm' : step)
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -302,8 +298,6 @@ export default function ImportacaoPage() {
             {/* Progress bar */}
             <div className="flex items-center gap-2 mb-8">
                 {(['upload', 'map', 'importing', 'done'] as const).map((s, idx) => {
-                    const isActive = idx === (activeIdx > 2 ? activeIdx - 1 : activeIdx === 1 ? 1 : activeIdx)
-                    const isDone = idx < activeIdx && !(activeIdx === 1 && idx === 1)
                     /* simplify: map step shown as active when on confirm or map */
                     const realActive = (step === 'upload' && idx === 0)
                         || ((step === 'confirm' || step === 'map' || step === 'save-profile') && idx === 1)
@@ -329,6 +323,29 @@ export default function ImportacaoPage() {
             {/* ── STEP 1: Upload ─────────────────────────────────────────────────────── */}
             {step === 'upload' && (
                 <div className="space-y-4">
+                    {/* Seletor de Categoria */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Tag className="w-4 h-4 text-[#2E75B6]" />
+                            <h2 className="font-semibold text-slate-700 text-sm">Categoria do arquivo</h2>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {CATEGORIAS_TCU.map(cat => (
+                                <button
+                                    key={cat.value}
+                                    onClick={() => setCategoria(cat.value)}
+                                    className={`px-3 py-2.5 rounded-xl text-xs font-medium text-left transition-all border ${
+                                        categoria === cat.value
+                                            ? 'bg-[#2E75B6] text-white border-[#2E75B6] shadow-sm'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-[#2E75B6] hover:text-[#2E75B6]'
+                                    }`}
+                                >
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Info */}
                     <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
                         <Info className="w-4 h-4 text-[#2E75B6] flex-shrink-0 mt-0.5" />
