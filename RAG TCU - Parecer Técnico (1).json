@@ -76,8 +76,8 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey",        "value": "sb_publishable_-XDy8m1iTYXlf-hayQzgTQ_agv5OggW" },
-            { "name": "Authorization", "value": "Bearer sb_publishable_-XDy8m1iTYXlf-hayQzgTQ_agv5OggW" },
+            { "name": "apikey",        "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0" },
             { "name": "Content-Type",  "value": "application/json" }
           ]
         },
