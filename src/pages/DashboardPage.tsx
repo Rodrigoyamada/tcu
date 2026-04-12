@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FilePlus, FileText, Clock, ChevronRight, LayoutDashboard } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -45,7 +45,7 @@ export default function DashboardPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-[#1F4E79]">Dashboard</h1>
                         <p className="text-slate-500 text-sm mt-0.5">
-                            Olá, {user?.name?.split(' ')[0]} — bem-vindo ao Acordeon TCU
+                            Olá, {user?.name?.split(' ')[0]} — bem-vindo ao TechDocsTCU
                         </p>
                     </div>
                     <Link

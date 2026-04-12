@@ -1,14 +1,15 @@
-import React from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-    Scale,
     LayoutDashboard,
     FolderOpen,
     FilePlus,
-    LogOut,
     UploadCloud,
     Users,
+    LogOut,
+    Bell,
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 const navItems = [
@@ -18,13 +19,26 @@ const navItems = [
 ]
 
 const adminItems = [
-    { to: '/dashboard/importar', label: 'Importar Dados', icon: UploadCloud, end: false },
+    { to: '/dashboard/importar', label: 'Gerenciar Dados', icon: UploadCloud, end: false },
     { to: '/dashboard/usuarios', label: 'Gerenciar Usuários', icon: Users, end: false },
 ]
 
 export default function AppLayout() {
     const { user, logout } = useAuth()
     const navigate = useNavigate()
+    const [notifications, setNotifications] = useState<any[]>([])
+
+    useEffect(() => {
+        const loadNotifications = async () => {
+            const { data } = await supabase
+                .from('notificacoes')
+                .select('*')
+                .eq('lida', false)
+                .order('criado_em', { ascending: false })
+            if (data) setNotifications(data)
+        }
+        loadNotifications()
+    }, [])
 
     const handleLogout = () => {
         logout()
@@ -35,21 +49,28 @@ export default function AppLayout() {
         <div className="flex flex-col h-screen overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
 
             {/* ── Header full-width ── */}
-            <header className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 bg-[#1F4E79] border-b border-white/10 shadow-md z-10">
+            <header className="flex-shrink-0 flex items-center justify-between py-3 bg-[#1F4E79] border-b border-white/10 shadow-md z-10">
                 {/* Brand / Logo */}
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-9 h-9 bg-white/15 rounded-lg">
-                        <Scale className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="leading-tight">
-                        <span className="font-bold text-base text-white tracking-tight">Acordeon</span>
-                        <span className="font-light text-white/70 text-xs ml-1">TCU</span>
-                        <p className="text-white/50 text-[10px] font-normal">Pesquisa em Jurisprudência</p>
-                    </div>
+                <div className="w-60 flex-shrink-0 flex items-center pl-6">
+                    <img src="/src/assets/logo.png" alt="TechDocsTCU" className="h-16 w-auto object-contain -ml-2" />
                 </div>
 
                 {/* Right: user + logout */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 pr-6">
+                    {/* Notifications */}
+                    <div className="relative">
+                        <NavLink
+                            to="/dashboard/notificacoes"
+                            title="Central de Notificações"
+                            className={({ isActive }) => `p-2 hover:bg-white/10 rounded-lg transition-all duration-150 relative flex items-center justify-center ${isActive ? 'text-white bg-white/10' : 'text-white/60 hover:text-white'}`}
+                        >
+                            <Bell size={18} />
+                            {notifications.length > 0 && (
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-[1.5px] border-[#1F4E79]"></span>
+                            )}
+                        </NavLink>
+                    </div>
+
                     <div className="flex items-center gap-2.5">
                         <div
                             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-white/20"
@@ -120,10 +141,7 @@ export default function AppLayout() {
                         )}
                     </nav>
 
-                    {/* Version */}
-                    <div className="px-5 py-3 text-white/30 text-xs border-t border-white/10">
-                        v1.0 · Tribunal de Contas da União
-                    </div>
+
                 </aside>
 
                 {/* Main content */}
@@ -131,6 +149,16 @@ export default function AppLayout() {
                     <Outlet />
                 </main>
             </div>
+
+            {/* ── Footer full-width ── */}
+            <footer className="w-full flex-shrink-0 bg-[#0F2942] py-2.5 px-6 flex justify-center items-center gap-2 z-10">
+                <div className="text-white/70 text-xs tracking-wide">
+                    Tribunal de Contas da União
+                </div>
+                <div className="text-white/30 text-[11px] font-mono">
+                    v1.0
+                </div>
+            </footer>
         </div>
     )
 }

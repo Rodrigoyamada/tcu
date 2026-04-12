@@ -14,7 +14,7 @@ export default defineConfig({
       '/api/n8n': {
         target: 'https://n8n.srv1291896.hstgr.cloud',
         changeOrigin: true,
-        secure: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/api\/n8n/, ''),
       },
     },

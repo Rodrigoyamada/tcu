@@ -12,6 +12,7 @@ import AreaPrincipalPage from './pages/AreaPrincipalPage'
 import MeusPareceres from './pages/MeusPareceres'
 import ImportacaoPage from './pages/ImportacaoPage'
 import UsuariosPage from './pages/UsuariosPage'
+import NotificacoesPage from './pages/NotificacoesPage'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/dashboard/pareceres" element={<MeusPareceres />} />
               <Route path="/dashboard/novo-parecer" element={<NovoParecerPage />} />
               <Route path="/dashboard/parecer/:id" element={<AreaPrincipalPage />} />
+              <Route path="/dashboard/notificacoes" element={<NotificacoesPage />} />
 
               {/* Admin-only */}
               <Route element={<AdminRoute />}>

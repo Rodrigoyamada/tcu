@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Sparkles, Save, Loader2, Scale, AlertCircle, CheckCircle2, FileDown, FileText } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { Sparkles, Save, Loader2, Scale, AlertCircle, CheckCircle2, FileDown, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { Parecer } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -18,7 +18,6 @@ Exemplos:
 export default function AreaPrincipalPage() {
     const { id } = useParams<{ id: string }>()
     const { user } = useAuth()
-    const navigate = useNavigate()
 
     const [parecer, setParecer] = useState<Parecer | null>(null)
     const [problema, setProblema] = useState('')
@@ -72,6 +71,9 @@ export default function AreaPrincipalPage() {
             })
 
             if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error(`Webhook n8n não encontrado (404). Garanta que o workflow está ATIVO no n8n.`)
+                }
                 throw new Error(`Erro do servidor N8n: ${response.status}`)
             }
 
@@ -386,13 +388,6 @@ export default function AreaPrincipalPage() {
             {/* Top bar */}
             <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-4">
                 <div className="max-w-4xl mx-auto">
-                    <button
-                        onClick={() => navigate('/dashboard')}
-                        className="flex items-center gap-1.5 text-slate-400 hover:text-[#1F4E79] text-sm transition-colors mb-2"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                        Dashboard
-                    </button>
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#1F4E79] to-[#2E75B6]">
                             <Scale className="w-4 h-4 text-white" />
@@ -453,8 +448,7 @@ export default function AreaPrincipalPage() {
                                 value={problema}
                                 onChange={(e) => setProblema(e.target.value)}
                                 placeholder={PLACEHOLDER}
-                                rows={16}
-                                className="w-full px-0 py-0 text-sm text-slate-700 bg-transparent placeholder-slate-300 resize-none focus:outline-none leading-relaxed"
+                                className="w-full px-0 py-0 text-sm text-slate-700 bg-transparent placeholder-slate-300 resize-none focus:outline-none leading-relaxed min-h-[300px] max-h-[60vh]"
                                 disabled={processingAI}
                             />
                         )}

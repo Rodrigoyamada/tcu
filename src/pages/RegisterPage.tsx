@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Scale, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function RegisterPage() {
@@ -55,13 +55,12 @@ export default function RegisterPage() {
 
             <div className="relative w-full max-w-md">
                 <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10">
-                    {/* Logo */}
                     <div className="flex flex-col items-center mb-8">
-                        <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] rounded-2xl shadow-lg mb-4">
-                            <Scale className="w-8 h-8 text-white" />
+                        <div className="flex items-center justify-center w-auto h-24 mb-4">
+                            <img src="/src/assets/logo.png" alt="TechDocsTCU" className="h-20 w-auto" />
                         </div>
-                        <h1 className="text-2xl font-bold text-[#1F4E79] tracking-tight">Criar Conta</h1>
-                        <p className="text-sm text-slate-500 mt-1 text-center">Acordeon TCU — Acesso de Usuário</p>
+                        <h1 className="text-2xl font-bold text-[#1F4E79] tracking-tight">TechDocsTCU</h1>
+                        <p className="text-sm text-slate-500 mt-1 text-center font-medium">Crie sua conta para começar</p>
                     </div>
 
                     {success ? (

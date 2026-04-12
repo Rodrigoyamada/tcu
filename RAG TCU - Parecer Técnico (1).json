@@ -72,7 +72,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/rpc/search_jurisprudencia",
+        "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/rpc/search_jurisprudencia_v2",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -97,9 +97,8 @@
       "alwaysOutputData": true
     },
 
-    {
       "parameters": {
-        "jsCode": "var resultados = $input.all();\nvar qn = $('Formatar Query').first().json;\nvar docs = [];\nif (resultados && resultados.length > 0) {\n  if (resultados.length === 1 && Array.isArray(resultados[0].json)) {\n    docs = resultados[0].json;\n  } else {\n    docs = resultados.map(item => item.json).filter(doc => Object.keys(doc).length > 0);\n  }\n}\n\n// Função para higienizar HTML sujo da base\nfunction stripHtml(html) {\n   if (!html) return '';\n   return html.replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nvar contexto = docs.slice(0, 8).map(function(doc, i) {\n  var numStr = stripHtml(doc.numero || 'S/N');\n  // Se o número for na verdade um texto gigante (erro do CSV), a gente corta p/ não poluir\n  if (numStr.length > 100) { numStr = numStr.substring(0, 80) + '...'; }\n  \n  var ementaLimpa = stripHtml(doc.ementa || 'Sem ementa');\n  \n  return '[' + (i+1) + '] Acórdão/Decisão ' + numStr + ' — ' + (doc.orgao||'') + ' (' + (doc.ano||doc.data_pub||'s/d') + ')\\nEmenta: ' + ementaLimpa;\n}).join('\\n\\n---\\n\\n');\n\nreturn [{ json: {\n  problema:               qn.problema,\n  titulo:                 qn.titulo,\n  descricao:              qn.descricao,\n  user:                   qn.user,\n  parecer_id:             qn.parecer_id,\n  termos_buscados:        qn.termos,\n  total_encontrado:       docs.length,\n  contexto_jurisprudencia: contexto\n}}];"
+        "jsCode": "var resultados = $input.all();\nvar qn = $('Formatar Query').first().json;\nvar docs = [];\nif (resultados && resultados.length > 0) {\n  if (resultados.length === 1 && Array.isArray(resultados[0].json)) {\n    docs = resultados[0].json;\n  } else {\n    docs = resultados.map(item => item.json).filter(doc => Object.keys(doc).length > 0);\n  }\n}\n\n// Função para higienizar HTML sujo da base\nfunction stripHtml(html) {\n   if (!html) return '';\n   return html.replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nvar contexto = docs.slice(0, 10).map(function(doc, i) {\n  var numStr = stripHtml(doc.numero || 'S/N');\n  if (numStr.length > 100) { numStr = numStr.substring(0, 80) + '...'; }\n  \n  var ementaLimpa = stripHtml(doc.ementa || 'Sem ementa');\n  var trecho = stripHtml(doc.snippet || '');\n  \n  var res = '[' + (i+1) + '] Acórdão/Decisão ' + numStr + ' — ' + (doc.orgao||'') + ' (' + (doc.ano||doc.data_pub||'s/d') + ')\\n';\n  res += 'Ementa: ' + ementaLimpa + '\\n';\n  if (trecho) {\n    res += 'Trecho relevante do Inteiro Teor: [...] ' + trecho + ' [...]';\n  }\n  return res;\n}).join('\\n\\n---\\n\\n');\n\nreturn [{ json: {\n  problema:               qn.problema,\n  titulo:                 qn.titulo,\n  descricao:              qn.descricao,\n  user:                   qn.user,\n  parecer_id:             qn.parecer_id,\n  termos_buscados:        qn.termos,\n  total_encontrado:       docs.length,\n  contexto_jurisprudencia: contexto\n}}];"
       },
       "id": "972ea061-5ddc-45fc-a9c4-57fcb16b3906",
       "name": "Formatar Contexto",
