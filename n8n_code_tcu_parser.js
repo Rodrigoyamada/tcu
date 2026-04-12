@@ -1,25 +1,65 @@
-// COLE ESTE CÓDIGO DENTRO DE UM NÓ "Code" NO SEU N8N
-// Ele processa o conteúdo cru recebido do HTTP Request do TCU
+// ═══════════════════════════════════════════════════════════════
+// NÓ: Comparar Tamanhos e Gerar Notificações
+// Cole este código no nó "Code" do workflow Monitor TCU no n8n
+//
+// Entradas esperadas no $json:
+//   arquivos_atuais  → { "Acórdãos 2021": "502.10 MB", ... }
+//   memoria_anterior → { "Acórdãos 2021": "500.79 MB", ... }
+//                      (lido do campo memoria_arquivos da tabela monitores_tcu)
+// ═══════════════════════════════════════════════════════════════
 
-const textoBruto = $input.first().json.data; // Ajuste se o nó HTTP vier em outra propriedade
-const linhas = textoBruto.split('\n');
+// Converte "500.79 MB" → número de bytes para comparação numérica
+function parseSize(str) {
+  if (!str) return 0;
+  const s = str.trim().replace(',', '.');
+  const m = s.match(/([\d.]+)\s*(KB|MB|GB)/i);
+  if (!m) return 0;
+  const v = parseFloat(m[1]);
+  const u = m[2].toUpperCase();
+  if (u === 'KB') return v * 1024;
+  if (u === 'MB') return v * 1024 * 1024;
+  if (u === 'GB') return v * 1024 * 1024 * 1024;
+  return v;
+}
 
-// A primeira linha do CSV traz a frase: "Última atualização: XX/XX/XXXX"
-const ultimaAtualizacao = linhas[0].trim();
+const atual    = $json.arquivos_atuais  || {};
+const anterior = $json.memoria_anterior || {};
 
-// Opcional: contar os arquivos "Acórdãos" listados
-let totalAcordaos = 0;
-for (let i = 2; i < linhas.length; i++) {
-  if (linhas[i].startsWith('Acórdãos,')) {
-    totalAcordaos++;
+const novos       = [];
+const atualizados = [];
+
+for (const [nome, tamanhoAtual] of Object.entries(atual)) {
+  const bytesAtual    = parseSize(tamanhoAtual);
+  const tamanhoAntigo = anterior[nome];
+
+  if (!tamanhoAntigo) {
+    // Arquivo completamente novo — não existia no histórico anterior
+    novos.push(`- NOVO ARQUIVO: ${nome} (${tamanhoAtual})`);
+  } else {
+    const bytesAntigo = parseSize(tamanhoAntigo);
+    if (bytesAtual > bytesAntigo) {
+      // Arquivo existente com tamanho AUMENTADO → há novos acórdãos
+      atualizados.push(`- ATUALIZADO: ${nome} — ${tamanhoAntigo} → ${tamanhoAtual}`);
+    }
+    // Se igual ou MENOR: arquivo não mudou ou foi compactado → ignora silenciosamente
   }
 }
 
-return {
+const temMudanca = novos.length > 0 || atualizados.length > 0;
+
+return [{
   json: {
-    status: "SUCESSO",
-    ultima_atualizacao_tcu: ultimaAtualizacao,
-    total_encontrados_acordaos: totalAcordaos,
-    mensagem_alerta: `Novos dados abertos no TCU (${totalAcordaos} lote(s) de Acórdãos mapeados). ${ultimaAtualizacao}`
+    tem_mudanca:     temMudanca,
+    novos:           novos,
+    atualizados:     atualizados,
+    arquivos_atuais: atual,        // passa adiante para salvar no banco
+    total_mudancas:  novos.length + atualizados.length,
+    mensagem:        [
+      temMudanca
+        ? `📢 ${novos.length + atualizados.length} arquivo(s) com novos dados no TCU:`
+        : null,
+      ...novos,
+      ...atualizados
+    ].filter(Boolean).join('\n')
   }
-};
+}];
