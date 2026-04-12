@@ -13,6 +13,8 @@ import MeusPareceres from './pages/MeusPareceres'
 import ImportacaoPage from './pages/ImportacaoPage'
 import UsuariosPage from './pages/UsuariosPage'
 import NotificacoesPage from './pages/NotificacoesPage'
+import UsuarioDetailPage from './pages/UsuarioDetailPage'
+import MeuPerfilPage from './pages/MeuPerfilPage'
 
 export default function App() {
   return (
@@ -31,11 +33,13 @@ export default function App() {
               <Route path="/dashboard/novo-parecer" element={<NovoParecerPage />} />
               <Route path="/dashboard/parecer/:id" element={<AreaPrincipalPage />} />
               <Route path="/dashboard/notificacoes" element={<NotificacoesPage />} />
+              <Route path="/dashboard/meu-perfil" element={<MeuPerfilPage />} />
 
               {/* Admin-only */}
               <Route element={<AdminRoute />}>
                 <Route path="/dashboard/importar" element={<ImportacaoPage />} />
                 <Route path="/dashboard/usuarios" element={<UsuariosPage />} />
+                <Route path="/dashboard/usuarios/:id" element={<UsuarioDetailPage />} />
               </Route>
             </Route>
           </Route>

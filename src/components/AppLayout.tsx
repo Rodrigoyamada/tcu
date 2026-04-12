@@ -27,6 +27,7 @@ export default function AppLayout() {
     const { user, logout } = useAuth()
     const navigate = useNavigate()
     const [notifications, setNotifications] = useState<any[]>([])
+    const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null)
 
     useEffect(() => {
         const loadNotifications = async () => {
@@ -37,7 +38,26 @@ export default function AppLayout() {
                 .order('criado_em', { ascending: false })
             if (data) setNotifications(data)
         }
+
+        const loadUltimaAtualizacao = async () => {
+            const { data } = await supabase
+                .from('importacoes')
+                .select('inicio_em, nome_arquivo')
+                .eq('status', 'concluido')
+                .order('inicio_em', { ascending: false })
+                .limit(1)
+                .single()
+            if (data?.inicio_em) {
+                setUltimaAtualizacao(
+                    new Date(data.inicio_em).toLocaleDateString('pt-BR', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                    })
+                )
+            }
+        }
+
         loadNotifications()
+        loadUltimaAtualizacao()
     }, [])
 
     const handleLogout = () => {
@@ -71,14 +91,18 @@ export default function AppLayout() {
                         </NavLink>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
+                    <NavLink
+                        to="/dashboard/meu-perfil"
+                        title="Meu Perfil"
+                        className={({ isActive }) => `flex items-center gap-2.5 p-1.5 pr-3 rounded-xl transition-all duration-150 ${isActive ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                    >
                         <div
                             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-white/20"
                         >
                             {user?.initials}
                         </div>
                         <span className="text-sm text-white/80 font-medium hidden sm:block">{user?.name}</span>
-                    </div>
+                    </NavLink>
                     <button
                         id="btn-logout"
                         onClick={handleLogout}
@@ -141,6 +165,25 @@ export default function AppLayout() {
                         )}
                     </nav>
 
+                    {/* Última atualização — rodapé do sidebar */}
+                    <div className="px-3 pb-4">
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
+                            <p className="text-white/40 text-[9px] uppercase tracking-widest font-semibold mb-1">
+                                Base atualizada em
+                            </p>
+                            {ultimaAtualizacao ? (
+                                <p className="text-white/80 text-xs font-medium flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                                    {ultimaAtualizacao}
+                                </p>
+                            ) : (
+                                <p className="text-white/30 text-xs">—</p>
+                            )}
+                            <p className="text-white/25 text-[9px] mt-1.5">
+                                Fonte: Dados Abertos TCU
+                            </p>
+                        </div>
+                    </div>
 
                 </aside>
 

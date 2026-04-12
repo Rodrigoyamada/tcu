@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
-import { Sparkles, Save, Loader2, Scale, AlertCircle, CheckCircle2, FileDown, FileText } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Sparkles, Save, Loader2, Scale, AlertCircle, CheckCircle2, FileDown, FileText, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { Parecer } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,6 +17,7 @@ Exemplos:
 
 export default function AreaPrincipalPage() {
     const { id } = useParams<{ id: string }>()
+    const navigate = useNavigate()
     const { user } = useAuth()
 
     const [parecer, setParecer] = useState<Parecer | null>(null)
@@ -34,12 +35,17 @@ export default function AreaPrincipalPage() {
         if (!id || !user) return
         const fetchParecer = async () => {
             setLoadingParecer(true)
-            const { data, error } = await supabase
+            
+            let query = supabase
                 .from('pareceres')
                 .select('*')
                 .eq('id', id)
-                .eq('user_id', user.email)
-                .single()
+
+            if (user.role !== 'admin') {
+                query = query.eq('user_id', user.email)
+            }
+
+            const { data, error } = await query.single()
             if (!error && data) {
                 setParecer(data as Parecer)
                 setProblema(data.content || '')
@@ -247,7 +253,7 @@ export default function AreaPrincipalPage() {
             const pdfFontsModule = await import('pdfmake/build/vfs_fonts')
             const pdfMake = pdfMakeModule.default
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            pdfMake.vfs = (pdfFontsModule as any).default?.pdfMake?.vfs
+            ;(pdfMake as any).vfs = (pdfFontsModule as any).default?.pdfMake?.vfs
                 || (pdfFontsModule as any).pdfMake?.vfs
                 || (pdfFontsModule as any).default?.vfs
 
@@ -284,7 +290,8 @@ export default function AreaPrincipalPage() {
                 ],
             }
 
-            pdfMake.createPdf(docDefinition).download(`${title.replace(/\s+/g, '_')}_Parecer.pdf`)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            pdfMake.createPdf(docDefinition as any).download(`${title.replace(/\s+/g, '_')}_Parecer.pdf`)
         } catch (err) {
             console.error('Erro ao exportar PDF:', err)
         } finally {
@@ -383,11 +390,22 @@ export default function AreaPrincipalPage() {
 
     // ── Render ────────────────────────────────────────────────────────────────
 
+    const isReadOnly = parecer?.user_id !== user?.email
+
     return (
         <div className="h-full flex flex-col">
             {/* Top bar */}
             <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-4">
                 <div className="max-w-4xl mx-auto">
+                    {isReadOnly && (
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#1F4E79] mb-4 transition-colors group"
+                        >
+                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                            Voltar para Detalhes do Usuário
+                        </button>
+                    )}
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#1F4E79] to-[#2E75B6]">
                             <Scale className="w-4 h-4 text-white" />
@@ -449,7 +467,7 @@ export default function AreaPrincipalPage() {
                                 onChange={(e) => setProblema(e.target.value)}
                                 placeholder={PLACEHOLDER}
                                 className="w-full px-0 py-0 text-sm text-slate-700 bg-transparent placeholder-slate-300 resize-none focus:outline-none leading-relaxed min-h-[300px] max-h-[60vh]"
-                                disabled={processingAI}
+                                disabled={processingAI || isReadOnly}
                             />
                         )}
                     </div>
@@ -464,37 +482,41 @@ export default function AreaPrincipalPage() {
 
                     {/* Buttons */}
                     <div className="flex flex-wrap items-center gap-3">
-                        <button
-                            id="btn-processar-ia"
-                            onClick={handleProcessAI}
-                            disabled={processingAI || !problema.trim()}
-                            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#1F4E79] to-[#2E75B6] text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:from-[#1a4368] hover:to-[#2563a0] disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            {processingAI ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Processando com IA…
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="w-4 h-4" />
-                                    Processar com IA
-                                </>
-                            )}
-                        </button>
+                        {!isReadOnly && (
+                            <>
+                                <button
+                                    id="btn-processar-ia"
+                                    onClick={handleProcessAI}
+                                    disabled={processingAI || !problema.trim()}
+                                    className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#1F4E79] to-[#2E75B6] text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:from-[#1a4368] hover:to-[#2563a0] disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {processingAI ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Processando com IA…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-4 h-4" />
+                                            Processar com IA
+                                        </>
+                                    )}
+                                </button>
 
-                        <button
-                            id="btn-salvar"
-                            onClick={handleSave}
-                            disabled={saving || processingAI}
-                            className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            {saving ? (
-                                <><Loader2 className="w-4 h-4 animate-spin text-[#2E75B6]" /> Salvando…</>
-                            ) : (
-                                <><Save className="w-4 h-4" /> Salvar Parecer</>
-                            )}
-                        </button>
+                                <button
+                                    id="btn-salvar"
+                                    onClick={handleSave}
+                                    disabled={saving || processingAI}
+                                    className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {saving ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin text-[#2E75B6]" /> Salvando…</>
+                                    ) : (
+                                        <><Save className="w-4 h-4" /> Salvar Parecer</>
+                                    )}
+                                </button>
+                            </>
+                        )}
 
                         <button
                             id="btn-exportar-pdf"

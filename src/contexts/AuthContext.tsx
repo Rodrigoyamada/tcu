@@ -13,7 +13,8 @@ interface AuthContextType {
     user: User | null
     login: (email: string, password: string) => Promise<void>
     logout: () => void
-    register: (email: string, name: string, password: string) => Promise<void>
+    register: (email: string, name: string, password: string, cpf: string, telefone: string) => Promise<void>
+    updateProfile: (data: Partial<User>) => void
 }
 
 // Admin hardcoded
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('acordeon_user', JSON.stringify(loggedUser))
     }, [])
 
-    const register = useCallback(async (email: string, name: string, password: string) => {
+    const register = useCallback(async (email: string, name: string, password: string, cpf: string, telefone: string) => {
         // Bloqueia e-mail do admin
         if (email.toLowerCase() === ADMIN_EMAIL) {
             throw new Error('Este e-mail já está em uso.')
@@ -87,6 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: name.trim(),
             password,
             role: 'user',
+            cpf: cpf.trim(),
+            telefone: telefone.trim(),
         })
 
         if (error) {
@@ -100,8 +103,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('acordeon_user')
     }, [])
 
+    const updateProfile = useCallback((data: Partial<User>) => {
+        setUser(prev => {
+            if (!prev) return prev
+            const newData = { ...prev, ...data }
+            if (data.name) {
+                newData.initials = getInitials(data.name)
+            }
+            localStorage.setItem('acordeon_user', JSON.stringify(newData))
+            return newData
+        })
+    }, [])
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, register }}>
+        <AuthContext.Provider value={{ user, login, logout, register, updateProfile }}>
             {children}
         </AuthContext.Provider>
     )

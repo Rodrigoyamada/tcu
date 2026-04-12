@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, ShieldAlert, ShieldCheck, Trash2, Users, Loader2, Check, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,6 +14,7 @@ interface AppUser {
 
 export default function UsuariosPage() {
     const { user: currentUser } = useAuth()
+    const navigate = useNavigate()
     const [users, setUsers] = useState<AppUser[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
@@ -133,7 +135,11 @@ export default function UsuariosPage() {
                                 </tr>
                             ) : (
                                 filtered.map((u) => (
-                                    <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                                    <tr
+                                        key={u.id}
+                                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                                        onClick={() => navigate(`/dashboard/usuarios/${u.id}`)}
+                                    >
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="font-semibold text-slate-800">{u.name}</span>

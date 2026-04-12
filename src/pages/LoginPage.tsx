@@ -47,7 +47,6 @@ export default function LoginPage() {
                         <div className="flex items-center justify-center w-auto h-24 mb-4">
                             <img src="/src/assets/logo.png" alt="TechDocsTCU" className="h-20 w-auto" />
                         </div>
-                        <h1 className="text-2xl font-bold text-[#1F4E79] tracking-tight">TechDocsTCU</h1>
                         <p className="text-sm text-slate-500 mt-1 text-center leading-relaxed">
                             Inteligência Técnica em Jurisprudência do TCU
                         </p>

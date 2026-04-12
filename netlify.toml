@@ -1,0 +1,15 @@
+# Proxy para as requisições da IA rodando no servidor n8n 
+# Isso resolve erros de Política de CORS nativo dos navegadores em APIs externas sem configuração de Headers.
+[[redirects]]
+  from = "/api/n8n/*"
+  to = "https://n8n.srv1291896.hstgr.cloud/:splat"
+  status = 200
+  force = true
+
+# Rota curinga para Single Page Applications (MUITO IMPORTANTE)
+# Qualquer URL não encontrada que não for um arquivo public (como as de rotas React Router /dashboard/algo) 
+# cairá nesta regra e será roteada para o index.html gerado pelo React
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
