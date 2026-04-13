@@ -4,7 +4,7 @@ import Papa from 'papaparse'
 import {
     Upload, FileSpreadsheet, Check, X, Loader2,
     AlertCircle, ChevronDown, Info, Database, Trash2,
-    BookMarked, Sparkles, ChevronRight, Pencil, Tag, Clock
+    BookMarked, Sparkles, ChevronRight, Pencil, Tag, Clock, Bell
 } from 'lucide-react'
 import { supabase, CATEGORIAS_TCU, type CategoriaTCU } from '../lib/supabase'
 
