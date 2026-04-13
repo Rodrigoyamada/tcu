@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import logoImage from '../assets/logo.png'
 
 const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -89,7 +90,7 @@ export default function AppLayout() {
             <header className="flex-shrink-0 flex items-center justify-between py-3 bg-[#1F4E79] border-b border-white/10 shadow-md z-10">
                 {/* Brand / Logo */}
                 <div className="w-60 flex-shrink-0 flex items-center pl-6">
-                    <img src="/src/assets/logo.png" alt="TechDocsTCU" className="h-16 w-auto object-contain -ml-2" />
+                    <img src={logoImage} alt="TechDocsTCU" className="h-16 w-auto object-contain -ml-2" />
                 </div>
 
                 {/* Right: user + logout */}

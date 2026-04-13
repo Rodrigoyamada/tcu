@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, Loader2, CheckCircle2, Check, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import logoImage from '../assets/logo.png'
 
 // ── Máscaras ──────────────────────────────────────────────────
 function maskCPF(v: string) {
@@ -92,7 +93,7 @@ export default function RegisterPage() {
                     {/* Logo */}
                     <div className="flex flex-col items-center mb-8">
                         <div className="flex items-center justify-center w-auto h-24 mb-2">
-                            <img src="/src/assets/logo.png" alt="TechDocsTCU" className="h-20 w-auto" />
+                            <img src={logoImage} alt="TechDocsTCU" className="h-20 w-auto" />
                         </div>
                         <p className="text-sm text-slate-500 text-center font-medium">Crie sua conta para começar</p>
                     </div>

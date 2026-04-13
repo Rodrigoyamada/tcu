@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import logoImage from '../assets/logo.png'
 
 export default function LoginPage() {
     const { login } = useAuth()
@@ -45,7 +46,7 @@ export default function LoginPage() {
                 <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10">
                     <div className="flex flex-col items-center mb-8">
                         <div className="flex items-center justify-center w-auto h-24 mb-4">
-                            <img src="/src/assets/logo.png" alt="TechDocsTCU" className="h-20 w-auto" />
+                            <img src={logoImage} alt="TechDocsTCU" className="h-20 w-auto" />
                         </div>
                         <p className="text-sm text-slate-500 mt-1 text-center leading-relaxed">
                             Inteligência Técnica em Jurisprudência do TCU
