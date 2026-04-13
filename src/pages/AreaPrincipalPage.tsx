@@ -64,6 +64,12 @@ export default function AreaPrincipalPage() {
         setAiError('')
 
         try {
+            // Zera o conteúdo no banco para o polling funcionar corretamente se for a segunda vez
+            await supabase
+                .from('pareceres')
+                .update({ content: null })
+                .eq('id', parecer.id)
+
             // Inicia processamento assíncrono no N8n
             const response = await fetch(N8N_WEBHOOK, {
                 method: 'POST',
