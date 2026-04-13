@@ -5,7 +5,7 @@
             "parameters": {
                 "httpMethod": "POST",
                 "path": "rag-tcu",
-                "responseMode": "responseNode",
+                "responseMode": "onReceived",
                 "options": {}
             },
             "id": "node-webhook",
@@ -148,27 +148,39 @@
         },
         {
             "parameters": {
-                "respondWith": "json",
-                "responseBody": "={{ JSON.stringify({ output: $json.output }) }}",
-                "options": {
-                    "responseHeaders": {
-                        "entries": [
-                            {
-                                "name": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "name": "Access-Control-Allow-Origin",
-                                "value": "*"
-                            }
-                        ]
-                    }
-                }
+                "method": "PATCH",
+                "url": "={{ 'https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/pareceres?id=eq.' + $('Webhook').first().json.body.parecer_id }}",
+                "sendHeaders": true,
+                "specifyHeaders": "keypair",
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "sb_publishable_-XDy8m1iTYXlf-hayQzgTQ_agv5OggW"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer sb_publishable_-XDy8m1iTYXlf-hayQzgTQ_agv5OggW"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "Prefer",
+                            "value": "return=minimal"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ content: $json.output }) }}",
+                "options": {}
             },
             "id": "node-respond",
-            "name": "Respond to Webhook",
-            "type": "n8n-nodes-base.respondToWebhook",
-            "typeVersion": 1.1,
+            "name": "Atualizar Supabase",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
             "position": [
                 1920,
                 300
@@ -246,7 +258,7 @@
             "main": [
                 [
                     {
-                        "node": "Respond to Webhook",
+                        "node": "Atualizar Supabase",
                         "type": "main",
                         "index": 0
                     }

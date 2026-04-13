@@ -64,6 +64,7 @@ export default function AreaPrincipalPage() {
         setAiError('')
 
         try {
+            // Inicia processamento assíncrono no N8n
             const response = await fetch(N8N_WEBHOOK, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -77,47 +78,34 @@ export default function AreaPrincipalPage() {
             })
 
             if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error(`Webhook n8n não encontrado (404). Garanta que o workflow está ATIVO no n8n.`)
+                if (response.status === 404) throw new Error(`Webhook n8n não encontrado (404).`)
+                throw new Error(`Falha de comunicação 🚀: ${response.status}`)
+            }
+
+            // Inicia loop de vigília silenciosa aguardando o banco atualizar (Max: 5 minutos)
+            let resultText = null;
+            for (let i = 0; i < 100; i++) {
+                await new Promise((resume) => setTimeout(resume, 3000)) // Espera 3s
+
+                const { data } = await supabase
+                    .from('pareceres')
+                    .select('content')
+                    .eq('id', parecer.id)
+                    .single()
+
+                if (data?.content && data.content.trim().length > 0) {
+                    resultText = data.content
+                    break
                 }
-                throw new Error(`Erro do servidor N8n: ${response.status}`)
             }
 
-            // Parser universal — suporta todos os formatos que N8n pode retornar
-            const rawText = await response.text()
-            let result: string
-
-            try {
-                const json = JSON.parse(rawText)
-                const data = Array.isArray(json) ? json[0] : json
-
-                // Formato Anthropic/Claude: {content: [{type:"text", text:"..."}]}
-                const anthropicText = Array.isArray(data?.content)
-                    ? data.content
-                        .filter((c: { type: string }) => c.type === 'text')
-                        .map((c: { text: string }) => c.text)
-                        .join('\n')
-                    : null
-
-                result = anthropicText
-                    || data?.output
-                    || data?.result
-                    || data?.resposta
-                    || data?.text
-                    || data?.message
-                    || data?.parecer
-                    || (typeof data === 'string' ? data : null)
-                    || JSON.stringify(json, null, 2)
-            } catch {
-                result = rawText
+            if (!resultText) {
+                throw new Error('O agente processou no fundo, mas demorou mais que 5 minutos para terminar. Tente recarregar depois.')
             }
 
-            if (!result?.trim()) {
-                throw new Error('Resposta do agente veio vazia. Verifique o fluxo N8n.')
-            }
-
-            setProblema(result)
+            setProblema(resultText)
             setPreviewMode(true)
+
         } catch (err: unknown) {
             setAiError(
                 err instanceof Error
