@@ -77,19 +77,21 @@ export default function AppLayout() {
 
                 {/* Right: user + logout */}
                 <div className="flex items-center gap-3 pr-6">
-                    {/* Notifications */}
-                    <div className="relative">
-                        <NavLink
-                            to="/dashboard/notificacoes"
-                            title="Central de Notificações"
-                            className={({ isActive }) => `p-2 hover:bg-white/10 rounded-lg transition-all duration-150 relative flex items-center justify-center ${isActive ? 'text-white bg-white/10' : 'text-white/60 hover:text-white'}`}
-                        >
-                            <Bell size={18} />
-                            {notifications.length > 0 && (
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-[1.5px] border-[#1F4E79]"></span>
-                            )}
-                        </NavLink>
-                    </div>
+                    {/* Notifications (Admin only) */}
+                    {user?.role === 'admin' && (
+                        <div className="relative">
+                            <NavLink
+                                to="/dashboard/notificacoes"
+                                title="Central de Notificações"
+                                className={({ isActive }) => `p-2 hover:bg-white/10 rounded-lg transition-all duration-150 relative flex items-center justify-center ${isActive ? 'text-white bg-white/10' : 'text-white/60 hover:text-white'}`}
+                            >
+                                <Bell size={18} />
+                                {notifications.length > 0 && (
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-[1.5px] border-[#1F4E79]"></span>
+                                )}
+                            </NavLink>
+                        </div>
+                    )}
 
                     <NavLink
                         to="/dashboard/meu-perfil"

@@ -48,11 +48,11 @@ export default function App() {
                 <Route path="/dashboard/pareceres" element={<MeusPareceres />} />
                 <Route path="/dashboard/novo-parecer" element={<NovoParecerPage />} />
                 <Route path="/dashboard/parecer/:id" element={<AreaPrincipalPage />} />
-                <Route path="/dashboard/notificacoes" element={<NotificacoesPage />} />
                 <Route path="/dashboard/meu-perfil" element={<MeuPerfilPage />} />
 
                 {/* Admin-only */}
                 <Route element={<AdminRoute />}>
+                  <Route path="/dashboard/notificacoes" element={<NotificacoesPage />} />
                   <Route path="/dashboard/importar" element={<ImportacaoPage />} />
                   <Route path="/dashboard/usuarios" element={<UsuariosPage />} />
                   <Route path="/dashboard/usuarios/:id" element={<UsuarioDetailPage />} />
