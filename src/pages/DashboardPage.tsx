@@ -9,22 +9,48 @@ export default function DashboardPage() {
     const { user } = useAuth()
     const navigate = useNavigate()
     const [pareceres, setPareceres] = useState<Parecer[]>([])
+    const [stats, setStats] = useState({ total: 0, processed: 0, pending: 0 })
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         if (!user) return
-        const fetchPareceres = async () => {
+        const fetchDashboardData = async () => {
             setLoading(true)
-            const { data, error } = await supabase
-                .from('pareceres')
-                .select('*')
-                .eq('user_id', user.email)
-                .order('created_at', { ascending: false })
+            
+            try {
+                // 1. Fetch count of total pareceres
+                const { count: totalCount } = await supabase
+                    .from('pareceres')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.email)
 
-            if (!error && data) setPareceres(data as Parecer[])
+                // 2. Fetch count of processed pareceres
+                const { count: processedCount } = await supabase
+                    .from('pareceres')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.email)
+                    .not('content', 'is', null)
+
+                const total = totalCount || 0
+                const processed = processedCount || 0
+                setStats({ total, processed, pending: total - processed })
+
+                // 3. Fetch only 5 recent items with explicit columns
+                const { data, error } = await supabase
+                    .from('pareceres')
+                    .select('id, title, description, content, created_at')
+                    .eq('user_id', user.email)
+                    .order('created_at', { ascending: false })
+                    .limit(5)
+                
+                if (!error && data) setPareceres(data as Parecer[])
+            } catch (err) {
+                console.error("Erro ao carregar dashboard:", err)
+            }
+            
             setLoading(false)
         }
-        fetchPareceres()
+        fetchDashboardData()
     }, [user])
 
     const formatDate = (dateStr: string) => {
@@ -68,7 +94,7 @@ export default function DashboardPage() {
                         </div>
                         <span className="text-slate-500 text-sm">Total de Pareceres</span>
                     </div>
-                    <p className="text-3xl font-bold text-[#1F4E79]">{pareceres.length}</p>
+                    <p className="text-3xl font-bold text-[#1F4E79]">{stats.total}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div className="flex items-center gap-3 mb-2">
@@ -78,7 +104,7 @@ export default function DashboardPage() {
                         <span className="text-slate-500 text-sm">Com conteúdo IA</span>
                     </div>
                     <p className="text-3xl font-bold text-green-700">
-                        {pareceres.filter(p => p.content).length}
+                        {stats.processed}
                     </p>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
@@ -89,7 +115,7 @@ export default function DashboardPage() {
                         <span className="text-slate-500 text-sm">Em andamento</span>
                     </div>
                     <p className="text-3xl font-bold text-amber-700">
-                        {pareceres.filter(p => !p.content).length}
+                        {stats.pending}
                     </p>
                 </div>
             </div>
