@@ -167,7 +167,10 @@ export default function UsuariosPage() {
                                                 <div className="flex items-center justify-end gap-2">
                                                     {/* Toggle Role Button */}
                                                     <button
-                                                        onClick={() => toggleRole(u.id, u.role)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleRole(u.id, u.role);
+                                                        }}
                                                         disabled={processingId === u.id || currentUser?.email.toLowerCase() === u.email.toLowerCase()}
                                                         title={u.role === 'admin' ? 'Rebaixar para Usuário' : 'Promover a Admin'}
                                                         className={`p-1.5 rounded-lg transition-colors ${u.role === 'admin'
@@ -181,17 +184,23 @@ export default function UsuariosPage() {
 
                                                     {/* Delete Button */}
                                                     {confirmDeleteId === u.id ? (
-                                                        <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg border border-red-100">
+                                                        <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg border border-red-100" onClick={(e) => e.stopPropagation()}>
                                                             <span className="text-xs text-red-600 font-medium mr-1">Excluir?</span>
                                                             <button
-                                                                onClick={() => handleDelete(u.id)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(u.id);
+                                                                }}
                                                                 disabled={processingId === u.id}
                                                                 className="p-1 rounded text-red-600 hover:bg-red-100 transition-colors"
                                                             >
                                                                 {processingId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                                                             </button>
                                                             <button
-                                                                onClick={() => setConfirmDeleteId(null)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setConfirmDeleteId(null);
+                                                                }}
                                                                 className="p-1 rounded text-slate-500 hover:bg-slate-200 transition-colors"
                                                             >
                                                                 <X className="w-3.5 h-3.5" />
@@ -199,7 +208,10 @@ export default function UsuariosPage() {
                                                         </div>
                                                     ) : (
                                                         <button
-                                                            onClick={() => setConfirmDeleteId(u.id)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setConfirmDeleteId(u.id);
+                                                            }}
                                                             disabled={processingId === u.id || currentUser?.email.toLowerCase() === u.email.toLowerCase()}
                                                             title="Excluir conta"
                                                             className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
