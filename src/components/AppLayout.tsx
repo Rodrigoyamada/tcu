@@ -31,6 +31,7 @@ export default function AppLayout() {
 
     useEffect(() => {
         const loadNotifications = async () => {
+            if (user?.role !== 'admin') return
             const { data } = await supabase
                 .from('notificacoes')
                 .select('*')
@@ -58,7 +59,23 @@ export default function AppLayout() {
 
         loadNotifications()
         loadUltimaAtualizacao()
-    }, [])
+
+        let subscription: any = null
+        if (user?.role === 'admin') {
+            subscription = supabase
+                .channel('notificacoes-badge')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'notificacoes' }, () => {
+                    loadNotifications() // Recarrega quando houver alteração
+                })
+                .subscribe()
+        }
+
+        return () => {
+            if (subscription) {
+                supabase.removeChannel(subscription)
+            }
+        }
+    }, [user])
 
     const handleLogout = () => {
         logout()

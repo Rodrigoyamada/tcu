@@ -565,15 +565,36 @@ export default function ImportacaoPage() {
                     <h1 className="text-2xl font-bold text-[#1F4E79]">Importar Jurisprudência</h1>
                 </div>
 
-                {/* TABS */}
-                <div className="flex bg-slate-100 p-1 rounded-xl">
-                    <button onClick={() => setActiveTab('nova')}
-                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'nova' ? 'bg-white text-[#1F4E79] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                        Nova Importação
-                    </button>
-                    <button onClick={() => setActiveTab('historico')}
-                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'historico' ? 'bg-white text-[#1F4E79] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                        Histórico
+                <div className="flex items-center gap-3">
+                    {/* TABS */}
+                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                        <button onClick={() => setActiveTab('nova')}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'nova' ? 'bg-white text-[#1F4E79] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                            Nova Importação
+                        </button>
+                        <button onClick={() => setActiveTab('historico')}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'historico' ? 'bg-white text-[#1F4E79] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                            Histórico
+                        </button>
+                    </div>
+
+                    {/* Botão de Teste (Admin Temporário) */}
+                    <button
+                        onClick={async () => {
+                            const { error } = await supabase.from('notificacoes').insert([
+                                { 
+                                    titulo: 'Teste de Alerta', 
+                                    mensagem: '- NOVO ARQUIVO: Atualização do Banco TCU\nO sistema de alertas em tempo real está funcionando perfeitamente!',
+                                    lida: false
+                                }
+                            ])
+                            if(error) alert('Erro ao mandar alerta: ' + error.message)
+                        }}
+                        title="Disparar uma notificação falsa para testar o sininho"
+                        className="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors flex items-center gap-2"
+                    >
+                        <Bell className="w-4 h-4" />
+                        Testar Alerta
                     </button>
                 </div>
             </div>

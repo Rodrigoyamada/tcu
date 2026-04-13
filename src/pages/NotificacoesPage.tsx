@@ -17,6 +17,17 @@ export default function NotificacoesPage() {
 
     useEffect(() => {
         loadNotificacoes()
+
+        const subscription = supabase
+            .channel('notificacoes-page')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'notificacoes' }, () => {
+                loadNotificacoes()
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(subscription)
+        }
     }, [])
 
     const loadNotificacoes = async () => {
