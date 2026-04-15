@@ -159,7 +159,8 @@ interface ImportRecord {
  * Usa regras específicas por categoria baseadas nos schemas reais dos CSVs do TCU.
  */
 function guessMappingForCategory(header: string, cat: string): DbFieldKey {
-    const h = header.trim().toUpperCase()
+    let h = header.replace(/^\uFEFF/, '').trim()
+    h = h.replace(/^["']|["']$/g, '').trim().toUpperCase()
 
     // ── Regras compartilhadas ──────────────────────────────────────────────────
     if (h === 'KEY')                      return cat === 'publicacao_boletim_jurisprudencia' ? 'numero' : '__skip'
@@ -274,15 +275,18 @@ function parseDate(raw: string): string | null {
 }
 
 /** Conta o total real de linhas de dados de um CSV via streaming (sem carregar na memória) */
-async function countFileLines(file: File, enc: string, skip: number, delimiter?: string): Promise<number> {
+async function countFileLines(file: File, enc: string, skip: number, delimiter?: string, ignoreQuotes?: boolean): Promise<number> {
     return new Promise((resolve) => {
         let lineCount = 0
+        const parseConfig: any = { encoding: enc }
+        if (delimiter) parseConfig.delimiter = delimiter
+        if (ignoreQuotes) parseConfig.quoteChar = '\x00'
+
         Papa.parse(file, {
+            ...parseConfig,
             header: true,
             skipEmptyLines: true,
-            encoding: enc,
-            delimiter: delimiter,
-            beforeFirstChunk: (chunk) => {
+            beforeFirstChunk: (chunk: string) => {
                 if (skip === 0) return chunk
                 const lines = chunk.split(/\r?\n/)
                 return lines.slice(skip).join('\n')
@@ -343,6 +347,7 @@ export default function ImportacaoPage() {
     const [encoding, setEncoding] = useState<'ISO-8859-1' | 'UTF-8'>('ISO-8859-1')
     const [skipRows, setSkipRows] = useState(0)
     const [delimiter, setDelimiter] = useState<string>('') // '' = auto
+    const [ignoreQuotes, setIgnoreQuotes] = useState(false)
     const [estimatedTotal, setEstimatedTotal] = useState(0)
     const [countingLines, setCountingLines] = useState(false)
 
@@ -425,11 +430,18 @@ export default function ImportacaoPage() {
         reader.readAsArrayBuffer(file)
     }
 
-    const processFile = useCallback((file: File, options?: { enc?: 'ISO-8859-1'|'UTF-8', skip?: number, delimiter?: string }) => {
+    const processFile = useCallback((file: File, options?: { enc?: 'ISO-8859-1'|'UTF-8', skip?: number, delimiter?: string, ignoreQuotes?: boolean }) => {
         currentFileRef.current = file
         const currentEnc = options?.enc || encoding
         const currentSkip = options?.skip !== undefined ? options?.skip : skipRows
         const currentDelim = options?.delimiter !== undefined ? options?.delimiter : delimiter
+        const currentIgnore = options?.ignoreQuotes !== undefined ? options?.ignoreQuotes : ignoreQuotes
+        
+        const parseConfig: any = {
+            encoding: currentEnc,
+        }
+        if (currentDelim) parseConfig.delimiter = currentDelim
+        if (currentIgnore) parseConfig.quoteChar = '\x00' // Usa caractere nulo para ignorar aspas
         
         setFileName(file.name)
         setSaveProfileName(file.name.replace(/\.[^/.]+$/, ''))
@@ -443,10 +455,9 @@ export default function ImportacaoPage() {
         if (ext === 'csv' || ext === 'txt') {
             // Primeiro, vamos tentar ler as primeiras linhas para detectar metadados
             Papa.parse(file, {
+                ...parseConfig,
                 preview: 5,
-                encoding: currentEnc,
-                delimiter: currentDelim,
-                complete: (results) => {
+                complete: (results: any) => {
                     const rawLines = results.data as string[][]
                     let detectedSkip = 0
                     
@@ -466,12 +477,11 @@ export default function ImportacaoPage() {
                     }
 
                     Papa.parse(file, {
+                        ...parseConfig,
                         header: true,
                         skipEmptyLines: true,
                         preview: 200,
-                        encoding: currentEnc,
-                        delimiter: currentDelim,
-                        beforeFirstChunk: (chunk) => {
+                        beforeFirstChunk: (chunk: string) => {
                             if (detectedSkip === 0) return chunk
                             const lines = chunk.split(/\r?\n/)
                             return lines.slice(detectedSkip).join('\n')
@@ -486,7 +496,7 @@ export default function ImportacaoPage() {
 
                             // Contagem real de linhas em background (streaming)
                             setCountingLines(true)
-                            const total = await countFileLines(file, currentEnc, detectedSkip, currentDelim)
+                            const total = await countFileLines(file, currentEnc, detectedSkip, currentDelim, currentIgnore)
                             setEstimatedTotal(total)
                             setCountingLines(false)
                         },
@@ -660,12 +670,15 @@ export default function ImportacaoPage() {
         }
 
         if (ext === 'csv' || ext === 'txt') {
+            const parseConfig: any = { encoding: encoding }
+            if (delimiter) parseConfig.delimiter = delimiter
+            if (ignoreQuotes) parseConfig.quoteChar = '\x00'
+
             Papa.parse(file, {
+                ...parseConfig,
                 header: true,
                 skipEmptyLines: true,
-                encoding: encoding,
-                delimiter: delimiter,
-                beforeFirstChunk: (chunk) => {
+                beforeFirstChunk: (chunk: string) => {
                     if (skipRows === 0) return chunk
                     const lines = chunk.split(/\r?\n/)
                     return lines.slice(skipRows).join('\n')
@@ -1187,6 +1200,21 @@ export default function ImportacaoPage() {
                                                     className="w-10 px-1 py-0.5 border border-slate-200 rounded text-center focus:ring-1 focus:ring-blue-100 outline-none"
                                                 />
                                             </div>
+                                            <div className="flex items-center gap-2 text-xs ml-2">
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={ignoreQuotes}
+                                                        onChange={(e) => {
+                                                            const val = e.target.checked
+                                                            setIgnoreQuotes(val)
+                                                            if (currentFileRef.current) processFile(currentFileRef.current, { ignoreQuotes: val })
+                                                        }}
+                                                        className="w-3 h-3 text-amber-600 rounded border-amber-300 focus:ring-amber-500 cursor-pointer"
+                                                    />
+                                                    Ignorar Aspas (Forçar Divisão)
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
@@ -1377,6 +1405,21 @@ export default function ImportacaoPage() {
                                                 }}
                                                 className="w-10 px-1 py-0.5 border border-slate-200 rounded text-center focus:ring-1 focus:ring-blue-100 outline-none"
                                             />
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs ml-2">
+                                            <label className="flex items-center gap-1.5 cursor-pointer text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={ignoreQuotes}
+                                                    onChange={(e) => {
+                                                        const val = e.target.checked
+                                                        setIgnoreQuotes(val)
+                                                        if (currentFileRef.current) processFile(currentFileRef.current, { ignoreQuotes: val })
+                                                    }}
+                                                    className="w-3 h-3 text-amber-600 rounded border-amber-300 focus:ring-amber-500 cursor-pointer"
+                                                />
+                                                Ignorar Aspas (Forçar Divisão)
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
