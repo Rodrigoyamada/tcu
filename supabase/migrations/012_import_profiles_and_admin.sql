@@ -26,7 +26,7 @@ create policy "Usuários autenticados podem deletar perfis"
     using (true);
 
 -- Ensure the admin user exists in app_users
-insert into public.app_users (id, email, role, nome)
+insert into public.app_users (id, email, role, name)
 select id, email, 'admin', 'Administrador'
 from auth.users
 where email = 'rodrigo.yamada@gmail.com'
