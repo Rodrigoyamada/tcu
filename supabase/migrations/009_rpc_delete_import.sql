@@ -1,3 +1,4 @@
+DROP FUNCTION IF EXISTS delete_import_safely(UUID);
 CREATE OR REPLACE FUNCTION delete_import_safely(p_import_id UUID)
 RETURNS boolean
 LANGUAGE plpgsql

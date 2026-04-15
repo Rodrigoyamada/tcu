@@ -6,6 +6,7 @@
 -- ============================================================
 
 -- ── search_jurisprudencia (busca simples — usada pelo n8n RAG) ──
+DROP FUNCTION IF EXISTS search_jurisprudencia(text);
 CREATE OR REPLACE FUNCTION search_jurisprudencia(query text)
 RETURNS SETOF jurisprudencia
 LANGUAGE plpgsql
@@ -82,6 +83,7 @@ END;
 $$;
 
 -- ── search_jurisprudencia_v2 (com snippets — usada pela UI) ─────
+DROP FUNCTION IF EXISTS search_jurisprudencia_v2(text);
 CREATE OR REPLACE FUNCTION search_jurisprudencia_v2(query_text text)
 RETURNS TABLE (
   id        UUID,

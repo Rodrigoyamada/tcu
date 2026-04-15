@@ -3,6 +3,7 @@
 -- Retorna a contagem de registros agrupada por tipo de categoria.
 -- ============================================================
 
+DROP FUNCTION IF EXISTS count_jurisprudencia_by_type();
 CREATE OR REPLACE FUNCTION count_jurisprudencia_by_type()
 RETURNS TABLE (tipo public.categoria_tcu, count bigint) 
 LANGUAGE plpgsql
