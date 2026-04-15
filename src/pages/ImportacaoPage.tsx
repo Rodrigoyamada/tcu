@@ -461,6 +461,22 @@ export default function ImportacaoPage() {
                     const rawLines = results.data as string[][]
                     let detectedSkip = 0
                     
+                    // Fallback agressivo: se detectou 1 coluna e ela tá cheia de pipes, a auto-detecção falhou miseravelmente
+                    let forcePipeAndIgnoreQuotes = false
+                    if (!currentDelim && rawLines.length > 0 && rawLines[0].length <= 2) {
+                        const firstCell = String(rawLines[0][0])
+                        if (firstCell.includes('|') && firstCell.includes('TIPO')) {
+                            forcePipeAndIgnoreQuotes = true
+                        }
+                    }
+
+                    const finalDelim = forcePipeAndIgnoreQuotes ? '|' : currentDelim
+                    const finalIgnore = forcePipeAndIgnoreQuotes ? true : currentIgnore
+                    if (forcePipeAndIgnoreQuotes && !currentDelim) {
+                        setDelimiter('|')
+                        setIgnoreQuotes(true)
+                    }
+
                     // Se a primeira linha contém "Atualização" ou algo do tipo, vamos procurar o cabeçalho real
                     for(let i=0; i < rawLines.length; i++) {
                         const lineStr = (rawLines[i] || []).join(',').toLowerCase()
@@ -476,8 +492,12 @@ export default function ImportacaoPage() {
                         setSkipRows(detectedSkip)
                     }
 
+                    const finalParseConfig: any = { encoding: currentEnc }
+                    if (finalDelim) finalParseConfig.delimiter = finalDelim
+                    if (finalIgnore) finalParseConfig.quoteChar = '\x00'
+
                     Papa.parse(file, {
-                        ...parseConfig,
+                        ...finalParseConfig,
                         header: true,
                         skipEmptyLines: true,
                         preview: 200,
@@ -496,7 +516,7 @@ export default function ImportacaoPage() {
 
                             // Contagem real de linhas em background (streaming)
                             setCountingLines(true)
-                            const total = await countFileLines(file, currentEnc, detectedSkip, currentDelim, currentIgnore)
+                            const total = await countFileLines(file, currentEnc, detectedSkip, finalDelim, finalIgnore)
                             setEstimatedTotal(total)
                             setCountingLines(false)
                         },
@@ -1140,7 +1160,12 @@ export default function ImportacaoPage() {
 
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                                 <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-                                    <h2 className="font-semibold text-slate-700 text-sm">Mapeamento de colunas</h2>
+                                    <div className="flex flex-col">
+                                        <h2 className="font-semibold text-slate-700 text-sm">Mapeamento de colunas</h2>
+                                        <span className={`text-[11px] mt-0.5 font-medium ${headers.length <= 1 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                            {headers.length} colunas identificadas
+                                        </span>
+                                    </div>
                                     <button onClick={() => setStep('map')}
                                         className="flex items-center gap-1 text-xs text-[#2E75B6] hover:underline">
                                         <Pencil className="w-3.5 h-3.5" /> Editar
@@ -1356,7 +1381,12 @@ export default function ImportacaoPage() {
 
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                                 <div className="px-5 py-3.5 border-b border-slate-100 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-slate-50">
-                                    <h2 className="font-semibold text-slate-700 text-sm">Mapeamento de Colunas</h2>
+                                    <div className="flex flex-col">
+                                        <h2 className="font-semibold text-slate-700 text-sm">Mapeamento de Colunas</h2>
+                                        <span className={`text-[11px] mt-0.5 font-medium ${headers.length <= 1 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                            {headers.length} colunas identificadas
+                                        </span>
+                                    </div>
                                     <div className="flex flex-wrap items-center gap-4">
                                         <div className="flex items-center gap-2 text-xs">
                                             <span className="text-slate-500">Separador:</span>
