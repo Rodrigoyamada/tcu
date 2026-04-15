@@ -8,6 +8,7 @@ import {
     Users,
     LogOut,
     Bell,
+    BarChart2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -20,8 +21,9 @@ const navItems = [
 ]
 
 const adminItems = [
-    { to: '/dashboard/importar', label: 'Gerenciar Dados', icon: UploadCloud, end: false },
-    { to: '/dashboard/usuarios', label: 'Gerenciar Usuários', icon: Users, end: false },
+    { to: '/dashboard/admin',    label: 'Painel Admin',        icon: BarChart2,  end: true },
+    { to: '/dashboard/importar', label: 'Gerenciar Dados',     icon: UploadCloud, end: false },
+    { to: '/dashboard/usuarios', label: 'Gerenciar Usuários',  icon: Users,       end: false },
 ]
 
 export default function AppLayout() {

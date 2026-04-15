@@ -1,0 +1,275 @@
+{
+  "name": "Robo atualizacao TCU",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 12
+            }
+          ]
+        }
+      },
+      "id": "bfb7d78b-c80f-4b6a-8767-e5e509e003ed",
+      "name": "Rodar a cada 12h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -640,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/monitores_tcu?fonte=eq.dados_abertos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "75521897-59a5-4345-9c44-385f076fc41a",
+      "name": "Ler Memória do Scraper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -416,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/jurisprudencia-arquivos.csv",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "e46fe1b7-61f5-4ebc-b475-708492a99cca",
+      "name": "Baixar CSV TCU",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -192,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const csvText = $json.data || '';\nconst linhas = csvText.split('\\n');\nif (linhas.length < 2) return { json: { teve_mudancas: false } };\n\nconst dtSite = linhas[0].trim();\n\nlet outputMemoria = {};\ntry {\n  outputMemoria = $('Ler Memória do Scraper').first().json || {};\n} catch(e) {}\n\nlet memoriaAntiga = outputMemoria.memoria_arquivos || {};\n\n// Compatibilidade: se foi salvo como string, faz parse\nif (typeof memoriaAntiga === 'string') {\n  try { memoriaAntiga = JSON.parse(memoriaAntiga); } catch(e) { memoriaAntiga = {}; }\n}\n\nfunction parseSize(str) {\n  if (!str) return 0;\n  const s = str.trim().replace(',', '.');\n  const m = s.match(/([\\d.]+)\\s*(KB|MB|GB)/i);\n  if (!m) return 0;\n  const v = parseFloat(m[1]);\n  const u = m[2].toUpperCase();\n  if (u === 'KB') return v * 1024;\n  if (u === 'MB') return v * 1024 * 1024;\n  if (u === 'GB') return v * 1024 * 1024 * 1024;\n  return v;\n}\n\nlet alteracoes = [];\nlet novaMemoria = {};\n\nfor (let i = 2; i < linhas.length; i++) {\n  const c = linhas[i].split(',');\n  if (c.length >= 4) {\n    const nome = c[0] + \" \" + c[1];\n    const tamanho = c[2].trim();\n    novaMemoria[nome] = tamanho;\n\n    if (!memoriaAntiga[nome]) {\n      alteracoes.push(`- NOVO ARQUIVO: ${nome} (${tamanho})`);\n    } else if (parseSize(tamanho) > parseSize(memoriaAntiga[nome])) {\n      alteracoes.push(`- ATUALIZADO: ${nome} (${memoriaAntiga[nome]} → ${tamanho})`);\n    }\n  }\n}\n\nconst mudou = alteracoes.length > 0;\nconst mensagem = mudou\n  ? \"Os seguintes lotes oficiais do TCU foram atualizados:\\n\" + alteracoes.join(\"\\n\") + `\\n\\nData Ref. do TCU: ${dtSite}`\n  : \"\";\n\nreturn {\n  json: {\n    teve_mudancas: mudou,\n    mensagem_detalhada: mensagem,\n    nova_memoria_json: JSON.stringify(novaMemoria),\n    ultima_atualizacao: dtSite\n  }\n};\n"
+      },
+      "id": "d8300be4-1fdd-4523-a3e6-19834a43dc7a",
+      "name": "Analisador de Mudanças",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.teve_mudancas }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "d5d122a3-28a7-4a6c-9d22-e139d8d9136f",
+      "name": "Tem Mudanças Estruturais?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        256,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/notificacoes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "titulo",
+              "value": "Novos Arquivos do TCU Descobertos!"
+            },
+            {
+              "name": "mensagem",
+              "value": "={{ $json.mensagem_detalhada }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5bf9ae0d-5720-4688-a2f3-eb2dffd07ff2",
+      "name": "Disparar Alerta Específico",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        480,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/monitores_tcu",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fonte",
+              "value": "dados_abertos"
+            },
+            {
+              "name": "ultima_leitura",
+              "value": "={{ $('Analisador de Mudanças').item.json.ultima_atualizacao }}"
+            },
+            {
+              "name": "memoria_arquivos",
+              "value": "={{ $('Analisador de Mudanças').item.json.nova_memoria_json }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e9fc1c4d-f5d1-4278-871b-30bc9fe938d7",
+      "name": "Consolidar Nova Memória",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        704,
+        208
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Rodar a cada 12h": {
+      "main": [
+        [
+          {
+            "node": "Ler Memória do Scraper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler Memória do Scraper": {
+      "main": [
+        [
+          {
+            "node": "Baixar CSV TCU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar CSV TCU": {
+      "main": [
+        [
+          {
+            "node": "Analisador de Mudanças",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analisador de Mudanças": {
+      "main": [
+        [
+          {
+            "node": "Tem Mudanças Estruturais?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Mudanças Estruturais?": {
+      "main": [
+        [
+          {
+            "node": "Disparar Alerta Específico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disparar Alerta Específico": {
+      "main": [
+        [
+          {
+            "node": "Consolidar Nova Memória",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "e692c822-9c0b-4b22-850a-4b2c3679613e",
+  "meta": {
+    "instanceId": "659c10ce91dda1bd1762bb0a7ad98f5737c2d03166dda8d31d013fa0439a9286"
+  },
+  "id": "V1y4eGM94bZwlYdPVr2Fv",
+  "tags": []
+}

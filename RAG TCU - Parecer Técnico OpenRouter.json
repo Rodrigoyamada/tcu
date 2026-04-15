@@ -1,0 +1,231 @@
+{
+  "name": "RAG TCU - Parecer Técnico (OpenRouter)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rag-tcu",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fa568de7-c9aa-4be9-acfa-cc2fd9bf163b",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "ae610e15-6290-4764-868c-7f8ee425ebb9"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\nreturn [{ json: {\n  titulo:     body.titulo     || 'Não informado',\n  problema:   body.problema   || body.descricao || 'Não informado',\n  descricao:  body.descricao  || '',\n  user:       body.user       || '',\n  parecer_id: body.parecer_id || ''\n}}];"
+      },
+      "id": "7d2fb73d-5372-4bac-8ca5-281924d63d7b",
+      "name": "Normalizar Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.problema }}",
+        "options": {
+          "systemMessage": "### EXTRATOR DE TERMOS JURÍDICOS PARA RAG ###\n\nVocê é um módulo especializado em extrair termos jurídicos para pesquisas em bancos de jurisprudência do TCU via Full-Text Search.\n\nRetorne APENAS um JSON válido. Sem explicações. Sem markdown.\n\nFormato de saída:\n{\"domain\":\"string\",\"query_ilike\":\"string\",\"termos\":[\"string\"],\"confidence\":0.0}\n\nRegras:\n1. domain: área jurídica ampla.\n2. query_ilike: Expressão de busca inteligente focada na solução do dilema. Use termos cruciais e o operador OR para alternativas. Exemplo de formato: terceirização OR serviço aquisição OR equipamento (ATENÇÃO: NÃO USE ASPAS na expressão gerada de jeito nenhum, use apenas palavras soltas e o operador OR em maiúsculo). Não use palavras genéricas, foque no cerne da questão jurídica.\n3. termos: de 4 a 7 termos complementares."
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Agente 1 — Extrair Termos",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [460, 0]
+    },
+
+    {
+      "parameters": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "model": "nvidia/llama-3.1-nemotron-ultra-253b-v1:free",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 512,
+          "timeout": 60000
+        }
+      },
+      "id": "a1b2c3d4-llm1-0001-0001-000000000001",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [460, 200],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENROUTER_CREDENTIAL_ID",
+          "name": "OpenRouter (via OpenAI compat)"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "var r = $input.first().json;\nvar txt = r.text || r.output || (r.content && r.content[0] && r.content[0].text) || JSON.stringify(r);\n\nvar q = { termos: [], query_ilike: 'contrato', confidence: 0.5, domain: '' };\nvar s = txt.indexOf('{'); var e = txt.lastIndexOf('}');\nif (s > -1 && e > s) { try { q = JSON.parse(txt.slice(s, e+1)); } catch(err) {} }\n\n// Remove aspas ou apóstrofos que a IA teima em gerar para o FTS não quebrar\nvar query_clean = (q.query_ilike || 'contrato');\nquery_clean = query_clean.replace(/[\"']/g, '');\n\nvar wb = $('Normalizar Input').first().json;\nreturn [{ json: {\n  query_ilike: query_clean,\n  termos:      q.termos      || [],\n  confidence:  q.confidence  || 0.5,\n  domain:      q.domain      || '',\n  titulo:      wb.titulo,\n  problema:    wb.problema,\n  descricao:   wb.descricao,\n  user:        wb.user,\n  parecer_id:  wb.parecer_id\n}}];"
+      },
+      "id": "42300a58-930a-426b-8ce9-1305bf8c36ea",
+      "name": "Formatar Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 0]
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/rpc/search_jurisprudencia_v2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvam9kcnF5a3VoeXRkZW1tcnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA1OTgsImV4cCI6MjA4NzI2NjU5OH0.R98fcu5iEzhDotFIiqT8e4rzcJELon2p2sqBMw-sja0" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "query", "value": "={{ $json.query_ilike }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "14e6c831-2fa5-4e8c-ab37-e9127f2534e1",
+      "name": "Buscar no Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 0],
+      "alwaysOutputData": true
+    },
+
+    {
+      "parameters": {
+        "jsCode": "var resultados = $input.all();\nvar qn = $('Formatar Query').first().json;\nvar docs = [];\nif (resultados && resultados.length > 0) {\n  if (resultados.length === 1 && Array.isArray(resultados[0].json)) {\n    docs = resultados[0].json;\n  } else {\n    docs = resultados.map(item => item.json).filter(doc => Object.keys(doc).length > 0);\n  }\n}\n\n// Função para higienizar HTML sujo da base\nfunction stripHtml(html) {\n   if (!html) return '';\n   return html.replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nvar contexto = docs.slice(0, 10).map(function(doc, i) {\n  var numStr = stripHtml(doc.numero || 'S/N');\n  if (numStr.length > 100) { numStr = numStr.substring(0, 80) + '...'; }\n  \n  var ementaLimpa = stripHtml(doc.ementa || 'Sem ementa');\n  var trecho = stripHtml(doc.snippet || '');\n  \n  var res = '[' + (i+1) + '] Acórdão/Decisão ' + numStr + ' — ' + (doc.orgao||'') + ' (' + (doc.ano||doc.data_pub||'s/d') + ')\\n';\n  res += 'Ementa: ' + ementaLimpa + '\\n';\n  if (trecho) {\n    res += 'Trecho relevante do Inteiro Teor: [...] ' + trecho + ' [...]';\n  }\n  return res;\n}).join('\\n\\n---\\n\\n');\n\nreturn [{ json: {\n  problema:               qn.problema,\n  titulo:                 qn.titulo,\n  descricao:              qn.descricao,\n  user:                   qn.user,\n  parecer_id:             qn.parecer_id,\n  termos_buscados:        qn.termos,\n  total_encontrado:       docs.length,\n  contexto_jurisprudencia: contexto\n}}];"
+      },
+      "id": "972ea061-5ddc-45fc-a9c4-57fcb16b3906",
+      "name": "Formatar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 0]
+    },
+
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=TÍTULO: {{ $json.titulo }}\n\nPROBLEMA:\n{{ $json.problema }}\n\nCONTEXTO JURISPRUDENCIAL ({{ $json.total_encontrado }} documentos encontrados):\n{{ $json.contexto_jurisprudencia }}",
+        "options": {
+          "systemMessage": "Como especialista sênior em Direito Administrativo, elabore um parecer técnico detalhado e objetivo. Baseie-se EXCLUSIVAMENTE no contexto jurisprudencial fornecido.\n\nRegras:\n- Não inventar acórdãos, súmulas ou jurisprudência.\n- Citar expressamente o número de cada decisão mencionada.\n- Se o contexto for insuficiente, declarar explicitamente a limitação.\n- Linguagem formal, objetiva, técnica. Sem opinião pessoal. Sem mencionar que é IA.\n\nEstrutura obrigatória (Markdown):\n\n# 1. RELATÓRIO\nSíntese objetiva do problema jurídico.\n\n# 2. FUNDAMENTAÇÃO\n## 2.1 Jurisprudência Aplicável\nAnálise dos entendimentos do TCU presentes no contexto.\n## 2.2 Análise do Caso Concreto\nAplicação dos entendimentos ao caso.\n\n# 3. CONCLUSÃO\nA conduta é: PERMITIDA / VEDADA / CONDICIONADA — com fundamento."
+        }
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Agente 2 — Gerar Parecer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [1420, 0]
+    },
+
+    {
+      "parameters": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "model": "nvidia/llama-3.1-nemotron-ultra-253b-v1:free",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 4096,
+          "timeout": 120000
+        }
+      },
+      "id": "a1b2c3d4-llm2-0002-0002-000000000002",
+      "name": "OpenRouter Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [1420, 200],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENROUTER_CREDENTIAL_ID",
+          "name": "OpenRouter (via OpenAI compat)"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "var r = $input.first().json;\nvar parecer = r.text || r.output || (r.content && r.content[0] && r.content[0].text) || JSON.stringify(r);\nreturn [{ json: { output: parecer } }];"
+      },
+      "id": "70161167-0f2b-46bc-ac7f-f57593909118",
+      "name": "Extrair Parecer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 0]
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ output: $json.output }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type",                "value": "application/json" },
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      },
+      "id": "2b796842-c522-46d3-9785-9b53c57b30aa",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1900, 0]
+    }
+  ],
+
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Normalizar Input", "type": "main", "index": 0 }]]
+    },
+    "Normalizar Input": {
+      "main": [[{ "node": "Agente 1 — Extrair Termos", "type": "main", "index": 0 }]]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [[{ "node": "Agente 1 — Extrair Termos", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Agente 1 — Extrair Termos": {
+      "main": [[{ "node": "Formatar Query", "type": "main", "index": 0 }]]
+    },
+    "Formatar Query": {
+      "main": [[{ "node": "Buscar no Supabase", "type": "main", "index": 0 }]]
+    },
+    "Buscar no Supabase": {
+      "main": [[{ "node": "Formatar Contexto", "type": "main", "index": 0 }]]
+    },
+    "Formatar Contexto": {
+      "main": [[{ "node": "Agente 2 — Gerar Parecer", "type": "main", "index": 0 }]]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [[{ "node": "Agente 2 — Gerar Parecer", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Agente 2 — Gerar Parecer": {
+      "main": [[{ "node": "Extrair Parecer", "type": "main", "index": 0 }]]
+    },
+    "Extrair Parecer": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+
+  "pinData": {},
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "openrouter-v1-2026-04-14",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "659c10ce91dda1bd1762bb0a7ad98f5737c2d03166dda8d31d013fa0439a9286"
+  },
+  "id": "acd_openrouter_parecer_tcu",
+  "tags": ["openrouter", "nvidia", "tcu", "rag"]
+}

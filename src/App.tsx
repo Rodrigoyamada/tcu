@@ -18,6 +18,7 @@ const UsuariosPage = lazy(() => import('./pages/UsuariosPage'))
 const NotificacoesPage = lazy(() => import('./pages/NotificacoesPage'))
 const UsuarioDetailPage = lazy(() => import('./pages/UsuarioDetailPage'))
 const MeuPerfilPage = lazy(() => import('./pages/MeuPerfilPage'))
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 
 // Loading fallback components
 function PageLoader() {
@@ -52,6 +53,7 @@ export default function App() {
 
                 {/* Admin-only */}
                 <Route element={<AdminRoute />}>
+                  <Route path="/dashboard/admin" element={<AdminDashboardPage />} />
                   <Route path="/dashboard/notificacoes" element={<NotificacoesPage />} />
                   <Route path="/dashboard/importar" element={<ImportacaoPage />} />
                   <Route path="/dashboard/usuarios" element={<UsuariosPage />} />
