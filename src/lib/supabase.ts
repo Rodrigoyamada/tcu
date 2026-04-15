@@ -37,12 +37,40 @@ export interface Jurisprudencia {
     tipo: CategoriaTCU
     numero: string | null
     ano: number | null              // coluna gerada automaticamente via data_pub
-    relator: string | null
-    orgao: string | null
-    data_pub: string | null         // formato ISO: YYYY-MM-DD
-    ementa: string | null
-    conteudo: string | null
+
+    // ─── Identificação / Cabeçalho ────────────────────────────────────────────
+    relator: string | null          // RELATOR (acórdão), AUTORTESE (juris/consulta/súmula)
+    orgao: string | null            // COLEGIADO
+    data_pub: string | null         // DATASESSAO / DATASESSAOFORMATADA — formato ISO: YYYY-MM-DD
+    titulo: string | null           // TITULO (acórdão, boletins, informativo)
+
+    // ─── Conteúdo Principal ───────────────────────────────────────────────────
+    ementa: string | null           // ASSUNTO (acórdão) | ENUNCIADO (demais) — FTS principal
+    excerto: string | null          // SUMARIO (acórdão) | EXCERTO (juris/consulta/súmula) | TEXTOINFO (informativo)
+    conteudo: string | null         // ACORDAO (acórdão) | EXCERTO/TEXTOACORDAO (demais) — RAG
+
+    // ─── Classificação Temática ───────────────────────────────────────────────
+    area: string | null             // AREA (juris_selecionada, consulta, súmula)
+    tema: string | null             // TEMA (juris_selecionada, consulta, súmula)
+    tipo_processo: string | null    // TIPOPROCESSO (4 categorias)
+    situacao: string | null         // SITUACAO (acórdão) | VIGENTE (súmula)
+    indexacao: string | null        // INDEXACAO — palavras-chave para FTS
+    referencia_legal: string | null // REFERENCIALEGAL (juris/consulta/súmula) | REFERENCIA (boletins)
+
+    // ─── Específico de Acórdãos ───────────────────────────────────────────────
+    num_ata: string | null          // NUMATA
+    interessados: string | null     // INTERESSADOS
+    entidade: string | null         // ENTIDADE
+    unidade_tecnica: string | null  // UNIDADETECNICA
+    decisao: string | null          // DECISAO
+    quorum: string | null           // QUORUM
+    relatorio: string | null        // RELATORIO (texto longo)
+    voto: string | null             // VOTO (texto longo)
+
+    // ─── Metadados Flexíveis ──────────────────────────────────────────────────
+    metadata: Record<string, unknown> // Campos extras não mapeados como colunas nativas
     url: string | null
+
     created_at: string
     updated_at: string
 }

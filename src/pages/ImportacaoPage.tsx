@@ -10,18 +10,125 @@ import { supabase, CATEGORIAS_TCU, type CategoriaTCU } from '../lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-const DB_FIELDS = [
-    { key: 'numero', label: 'Número', required: false, hint: 'Ex: Acórdão 1234/2023' },
-    { key: 'relator', label: 'Relator', required: false, hint: 'Nome do relator' },
-    { key: 'orgao', label: 'Órgão', required: false, hint: 'Ex: Plenário, 1ª Câmara' },
-    { key: 'data_pub', label: 'Data', required: false, hint: 'Data de publicação' },
-    { key: 'ementa', label: 'Ementa', required: false, hint: 'Resumo / sumário (busca)' },
-    { key: 'conteudo', label: 'Conteúdo', required: false, hint: 'Texto completo' },
-    { key: 'url', label: 'URL', required: false, hint: 'Link original' },
-    { key: '__skip', label: '— Ignorar —', required: false, hint: '' },
-] as const
+// Todos os campos nativos do banco + __skip + __compose (campo composto)
+type DbFieldKey =
+    | 'numero' | 'titulo' | 'relator' | 'orgao' | 'data_pub'
+    | 'ementa' | 'excerto' | 'conteudo' | 'url'
+    | 'area' | 'tema' | 'tipo_processo' | 'situacao' | 'indexacao' | 'referencia_legal'
+    | 'num_ata' | 'interessados' | 'entidade' | 'unidade_tecnica'
+    | 'decisao' | 'quorum' | 'relatorio' | 'voto'
+    | '__skip' | '__compose_num' | '__compose_ano'
 
-type DbFieldKey = typeof DB_FIELDS[number]['key']
+interface DbFieldDef {
+    key: DbFieldKey
+    label: string
+    hint?: string
+}
+
+// Campos mapeáveis por categoria — mostrados no dropdown de mapeamento
+const CATEGORY_DB_FIELDS: Record<string, DbFieldDef[]> = {
+    acordao: [
+        { key: 'numero',          label: 'Número (composto NUMACORDAO/ANO)',   hint: 'Gerado automaticamente' },
+        { key: '__compose_num',   label: 'Num. Acórdão ← parte do Número',    hint: 'Combina com coluna ANO' },
+        { key: '__compose_ano',   label: 'Ano Acórdão ← parte do Número',     hint: 'Combina com coluna NUM' },
+        { key: 'titulo',          label: 'Título',                             hint: 'TITULO' },
+        { key: 'orgao',           label: 'Colegiado / Órgão',                 hint: 'COLEGIADO' },
+        { key: 'data_pub',        label: 'Data da Sessão',                    hint: 'DATASESSAO' },
+        { key: 'relator',         label: 'Relator',                           hint: 'RELATOR' },
+        { key: 'situacao',        label: 'Situação',                          hint: 'SITUACAO' },
+        { key: 'tipo_processo',   label: 'Tipo de Processo',                  hint: 'TIPOPROCESSO' },
+        { key: 'interessados',    label: 'Interessados',                      hint: 'INTERESSADOS' },
+        { key: 'entidade',        label: 'Entidade',                          hint: 'ENTIDADE' },
+        { key: 'unidade_tecnica', label: 'Unidade Técnica',                   hint: 'UNIDADETECNICA' },
+        { key: 'ementa',          label: 'Ementa ★ FTS',                      hint: 'ASSUNTO → busca FTS' },
+        { key: 'excerto',         label: 'Excerto / Sumário',                 hint: 'SUMARIO' },
+        { key: 'conteudo',        label: 'Conteúdo Principal ★ RAG',          hint: 'ACORDAO → texto para IA' },
+        { key: 'decisao',         label: 'Decisão',                           hint: 'DECISAO' },
+        { key: 'quorum',          label: 'Quórum',                            hint: 'QUORUM' },
+        { key: 'num_ata',         label: 'Número da Ata',                     hint: 'NUMATA' },
+        { key: 'relatorio',       label: 'Relatório ★ RAG',                   hint: 'RELATORIO' },
+        { key: 'voto',            label: 'Voto ★ RAG',                        hint: 'VOTO' },
+        { key: '__skip',          label: '— Ignorar —' },
+    ],
+    jurisprudencia_selecionada: [
+        { key: '__compose_num',   label: 'Num. Acórdão ← parte do Número' },
+        { key: '__compose_ano',   label: 'Ano Acórdão ← parte do Número' },
+        { key: 'orgao',           label: 'Colegiado / Órgão' },
+        { key: 'data_pub',        label: 'Data da Sessão',   hint: 'DATASESSAOFORMATADA' },
+        { key: 'relator',         label: 'Autor da Tese',    hint: 'AUTORTESE' },
+        { key: 'area',            label: 'Área',             hint: 'AREA' },
+        { key: 'tema',            label: 'Tema',             hint: 'TEMA' },
+        { key: 'tipo_processo',   label: 'Tipo de Processo' },
+        { key: 'ementa',          label: 'Enunciado ★ FTS',  hint: 'ENUNCIADO' },
+        { key: 'conteudo',        label: 'Excerto ★ RAG',    hint: 'EXCERTO → texto para IA' },
+        { key: 'indexacao',       label: 'Indexação',        hint: 'INDEXACAO' },
+        { key: 'referencia_legal',label: 'Referência Legal', hint: 'REFERENCIALEGAL' },
+        { key: '__skip',          label: '— Ignorar —' },
+    ],
+    consulta: [
+        { key: 'numero',          label: 'Número Formatado', hint: 'NUMACORDAOFORMATADO' },
+        { key: '__compose_num',   label: 'Num. Acórdão ← parte do Número' },
+        { key: '__compose_ano',   label: 'Ano Acórdão ← parte do Número' },
+        { key: 'orgao',           label: 'Colegiado / Órgão' },
+        { key: 'data_pub',        label: 'Data da Sessão' },
+        { key: 'relator',         label: 'Autor da Tese' },
+        { key: 'area',            label: 'Área' },
+        { key: 'tema',            label: 'Tema' },
+        { key: 'tipo_processo',   label: 'Tipo de Processo' },
+        { key: 'ementa',          label: 'Enunciado ★ FTS' },
+        { key: 'conteudo',        label: 'Excerto ★ RAG' },
+        { key: 'indexacao',       label: 'Indexação' },
+        { key: 'referencia_legal',label: 'Referência Legal' },
+        { key: '__skip',          label: '— Ignorar —' },
+    ],
+    sumula: [
+        { key: 'numero',          label: 'Número da Súmula', hint: 'NUMERO' },
+        { key: 'orgao',           label: 'Colegiado' },
+        { key: 'data_pub',        label: 'Data da Sessão' },
+        { key: 'relator',         label: 'Autor da Tese',    hint: 'AUTORTESE' },
+        { key: 'area',            label: 'Área' },
+        { key: 'tema',            label: 'Tema' },
+        { key: 'tipo_processo',   label: 'Tipo de Processo' },
+        { key: 'situacao',        label: 'Vigente',           hint: 'VIGENTE → situacao' },
+        { key: 'ementa',          label: 'Enunciado ★ FTS',  hint: 'ENUNCIADO = texto da súmula' },
+        { key: 'conteudo',        label: 'Excerto ★ RAG',    hint: 'EXCERTO → texto para IA' },
+        { key: 'indexacao',       label: 'Indexação' },
+        { key: 'referencia_legal',label: 'Referência Legal' },
+        { key: '__skip',          label: '— Ignorar —' },
+    ],
+    publicacao_boletim_jurisprudencia: [
+        { key: 'numero',          label: 'Chave (KEY)',       hint: 'KEY' },
+        { key: 'titulo',          label: 'Título' },
+        { key: 'ementa',          label: 'Enunciado ★ FTS' },
+        { key: 'referencia_legal',label: 'Referência',        hint: 'REFERENCIA' },
+        { key: 'conteudo',        label: 'Texto Acórdão ★ RAG', hint: 'TEXTOACORDAO' },
+        { key: '__skip',          label: '— Ignorar —' },
+    ],
+    publicacao_boletim_pessoal: [
+        { key: 'numero',          label: 'Número',            hint: 'NUMERO' },
+        { key: 'titulo',          label: 'Título' },
+        { key: 'ementa',          label: 'Enunciado ★ FTS' },
+        { key: 'referencia_legal',label: 'Referência' },
+        { key: 'conteudo',        label: 'Texto Acórdão ★ RAG' },
+        { key: '__skip',          label: '— Ignorar —' },
+    ],
+    publicacao_informativo_licitacoes: [
+        { key: 'numero',          label: 'Número',            hint: 'NUMERO' },
+        { key: 'titulo',          label: 'Título' },
+        { key: 'orgao',           label: 'Colegiado' },
+        { key: 'ementa',          label: 'Enunciado ★ FTS' },
+        { key: 'conteudo',        label: 'Texto Acórdão ★ RAG', hint: 'TEXTOACORDAO' },
+        { key: 'excerto',         label: 'Texto Informativo', hint: 'TEXTOINFO' },
+        { key: '__skip',          label: '— Ignorar —' },
+    ],
+}
+
+// Campos nativos válidos — tudo que não estiver aqui vai para metadata{}
+const NATIVE_DB_FIELDS = new Set<string>([
+    'numero', 'titulo', 'relator', 'orgao', 'data_pub', 'ementa', 'excerto', 'conteudo', 'url',
+    'area', 'tema', 'tipo_processo', 'situacao', 'indexacao', 'referencia_legal',
+    'num_ata', 'interessados', 'entidade', 'unidade_tecnica', 'decisao', 'quorum', 'relatorio', 'voto',
+])
 
 interface RowData { [col: string]: string }
 
@@ -47,22 +154,109 @@ interface ImportRecord {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function guessMapping(header: string): DbFieldKey {
-    const h = header.toLowerCase().replace(/[^a-z0-9áéíóúâêôçã_]/gi, '')
-    // NUMERO
-    if (/(numero|num_doc|num_sequencial|numacordao|nracordao|num_acordao|nr_acordao|acordao_numero|^nr$|^num$|sumula_num|informativo_num)/.test(h)) return 'numero'
-    // RELATOR
-    if (/(relator|ministro|autor|ministro_relator|relator_ministro)/.test(h)) return 'relator'
-    // ORGAO
-    if (/(orgao|órgão|colegiado|camara|câmara|plenario|plenário|tribunal|unidade_tecnica)/.test(h)) return 'orgao'
-    // DATA
-    if (/^(data|pub|publicacao|publicação|sessao|sessão|date|dt_publicacao|data_sessao|anoacordao|ano)$/.test(h)) return 'data_pub'
-    // EMENTA
-    if (/(ementa|enunciado|resumo|sumario|sumário|assunto|subject|objeto)/.test(h)) return 'ementa'
-    // CONTEUDO
-    if (/(conteudo|conteúdo|textinfo|texto|inteiro|teor|descricao|descrição|content|body|inteiro_teor|transcricao|transcrição)/.test(h)) return 'conteudo'
-    // URL
-    if (/(url|link|href|endereco|endereço|original)/.test(h)) return 'url'
+/**
+ * Auto-detecta o campo de destino com base no nome da coluna e na categoria.
+ * Usa regras específicas por categoria baseadas nos schemas reais dos CSVs do TCU.
+ */
+function guessMappingForCategory(header: string, cat: string): DbFieldKey {
+    const h = header.trim().toUpperCase()
+
+    // ── Regras compartilhadas ──────────────────────────────────────────────────
+    if (h === 'KEY')                      return cat === 'publicacao_boletim_jurisprudencia' ? 'numero' : '__skip'
+    if (h === 'COLEGIADO')                return 'orgao'
+    if (h === 'TIPOPROCESSO')             return 'tipo_processo'
+    if (h === 'AREA')                     return 'area'
+    if (h === 'TEMA')                     return 'tema'
+    if (h === 'INDEXACAO')                return 'indexacao'
+
+    // ── Acórdãos ──────────────────────────────────────────────────────────────
+    if (cat === 'acordao') {
+        if (h === 'NUMACORDAO')           return '__compose_num'
+        if (h === 'ANOACORDAO')           return '__compose_ano'
+        if (h === 'TITULO')               return 'titulo'
+        if (h === 'NUMATA')               return 'num_ata'
+        if (h === 'DATASESSAO')           return 'data_pub'
+        if (h === 'RELATOR')              return 'relator'
+        if (h === 'SITUACAO')             return 'situacao'
+        if (h === 'INTERESSADOS')         return 'interessados'
+        if (h === 'ENTIDADE')             return 'entidade'
+        if (h === 'UNIDADETECNICA')       return 'unidade_tecnica'
+        if (h === 'ASSUNTO')              return 'ementa'
+        if (h === 'SUMARIO')              return 'excerto'
+        if (h === 'ACORDAO')              return 'conteudo'
+        if (h === 'DECISAO')              return 'decisao'
+        if (h === 'QUORUM')               return 'quorum'
+        if (h === 'RELATORIO')            return 'relatorio'
+        if (h === 'VOTO')                 return 'voto'
+        return '__skip'
+    }
+
+    // ── Jurisprudência Selecionada ─────────────────────────────────────────────
+    if (cat === 'jurisprudencia_selecionada') {
+        if (h === 'NUMACORDAO')           return '__compose_num'
+        if (h === 'ANOACORDAO')           return '__compose_ano'
+        if (h === 'DATASESSAOFORMATADA')  return 'data_pub'
+        if (h === 'AUTORTESE')            return 'relator'
+        if (h === 'ENUNCIADO')            return 'ementa'
+        if (h === 'EXCERTO')              return 'conteudo'
+        if (h === 'REFERENCIALEGAL')      return 'referencia_legal'
+        return '__skip'
+    }
+
+    // ── Respostas a Consultas ─────────────────────────────────────────────────
+    if (cat === 'consulta') {
+        if (h === 'NUMACORDAOFORMATADO')  return 'numero'
+        if (h === 'NUMACORDAO')           return '__compose_num'
+        if (h === 'ANOACORDAO')           return '__compose_ano'
+        if (h === 'DATASESSAOFORMATADA')  return 'data_pub'
+        if (h === 'AUTORTESE')            return 'relator'
+        if (h === 'ENUNCIADO')            return 'ementa'
+        if (h === 'EXCERTO')              return 'conteudo'
+        if (h === 'REFERENCIALEGAL')      return 'referencia_legal'
+        return '__skip'
+    }
+
+    // ── Súmulas ───────────────────────────────────────────────────────────────
+    if (cat === 'sumula') {
+        if (h === 'NUMERO')               return 'numero'
+        if (h === 'DATASESSAOFORMATADA')  return 'data_pub'
+        if (h === 'AUTORTESE')            return 'relator'
+        if (h === 'VIGENTE')              return 'situacao'
+        if (h === 'ENUNCIADO')            return 'ementa'
+        if (h === 'EXCERTO')              return 'conteudo'
+        if (h === 'REFERENCIALEGAL')      return 'referencia_legal'
+        return '__skip'
+    }
+
+    // ── Boletim de Jurisprudência ─────────────────────────────────────────────
+    if (cat === 'publicacao_boletim_jurisprudencia') {
+        if (h === 'TITULO')               return 'titulo'
+        if (h === 'ENUNCIADO')            return 'ementa'
+        if (h === 'REFERENCIA')           return 'referencia_legal'
+        if (h === 'TEXTOACORDAO')         return 'conteudo'
+        return '__skip'
+    }
+
+    // ── Boletim de Pessoal ────────────────────────────────────────────────────
+    if (cat === 'publicacao_boletim_pessoal') {
+        if (h === 'NUMERO')               return 'numero'
+        if (h === 'TITULO')               return 'titulo'
+        if (h === 'ENUNCIADO')            return 'ementa'
+        if (h === 'REFERENCIA')           return 'referencia_legal'
+        if (h === 'TEXTOACORDAO')         return 'conteudo'
+        return '__skip'
+    }
+
+    // ── Informativo de Licitações ─────────────────────────────────────────────
+    if (cat === 'publicacao_informativo_licitacoes') {
+        if (h === 'NUMERO')               return 'numero'
+        if (h === 'TITULO')               return 'titulo'
+        if (h === 'ENUNCIADO')            return 'ementa'
+        if (h === 'TEXTOACORDAO')         return 'conteudo'
+        if (h === 'TEXTOINFO')            return 'excerto'
+        return '__skip'
+    }
+
     return '__skip'
 }
 
@@ -175,10 +369,8 @@ export default function ImportacaoPage() {
         setLoadingHistorico(false)
     }
 
-    // ── File parsing ───────────────────────────────────────────────────────────
-
     const afterParse = useCallback((cols: string[], data: RowData[]) => {
-        const initial = Object.fromEntries(cols.map(c => [c, guessMapping(c)])) as Record<string, DbFieldKey>
+        const initial = Object.fromEntries(cols.map(c => [c, guessMappingForCategory(c, categoria)])) as Record<string, DbFieldKey>
         setHeaders(cols)
         setRows(data)
         setMapping(initial)
@@ -210,7 +402,7 @@ export default function ImportacaoPage() {
             setSuggestedScore(0)
             setStep((allUnknown || !hasCritical) ? 'map' : 'confirm')
         }
-    }, [profiles])
+    }, [profiles, categoria])
 
     const handleSheetChange = async (sheet: string) => {
         if (!fileInputRef.current?.files?.[0]) return
@@ -336,7 +528,7 @@ export default function ImportacaoPage() {
         const merged: Record<string, DbFieldKey> = {}
         for (const col of headers) {
             const found = Object.entries(p.mapping).find(([k]) => k.toLowerCase() === col.toLowerCase())
-            merged[col] = found ? (found[1] as DbFieldKey) : guessMapping(col)
+            merged[col] = found ? (found[1] as DbFieldKey) : guessMappingForCategory(col, categoria)
         }
         setMapping(merged)
         setSuggestedProfile(p)
@@ -402,29 +594,56 @@ export default function ImportacaoPage() {
         const processRow = (row: RowData) => {
             if (!row) return
             const rec: Record<string, any> = { tipo: categoria, importacao_id: importId }
+            const extraMeta: Record<string, string> = {}
+            let composeNum = ''
+            let composeAno = ''
             let hasData = false
-            
-            // Mapeamento via configuração do usuário
+
+            // ── Mapeamento via configuração do usuário ────────────────────────
             for (const [col, field] of Object.entries(mapping)) {
-                if (field === '__skip') continue
                 const val = (row[col] ?? '').toString().trim()
                 if (!val) continue
-                rec[field] = field === 'data_pub' ? parseDate(val) : 
-                             field === 'numero' ? val.substring(0, 200) : val
-                hasData = true
+
+                if (field === '__skip') continue
+
+                if (field === '__compose_num') {
+                    composeNum = val
+                    continue
+                }
+                if (field === '__compose_ano') {
+                    composeAno = val
+                    continue
+                }
+
+                if (NATIVE_DB_FIELDS.has(field)) {
+                    rec[field] = field === 'data_pub' ? parseDate(val)
+                               : field === 'numero'   ? val.substring(0, 200)
+                               : val
+                    hasData = true
+                } else {
+                    // Campo não nativo → acumula no JSONB
+                    extraMeta[col] = val
+                }
             }
 
-            // Fallback específico para campos comuns do TCU (caso não mapeados explicitamente)
-            const rowKeys = Object.keys(row)
-            const findKey = (pattern: RegExp) => rowKeys.find(k => pattern.test(k))
-            
-            const numKey = findKey(/(num|nr)acordao/i)
-            const anoKey = findKey(/anoacordao/i)
-            
-            if (numKey && row[numKey] && anoKey && row[anoKey]) {
-                const combined = `${row[numKey]}/${row[anoKey]}`
-                if (!rec['numero']) rec['numero'] = combined
-                hasData = true
+            // ── Composição de numero por categoria ───────────────────────────
+            if (!rec['numero']) {
+                if (composeNum && composeAno) {
+                    // Acórdãos, Juris. Selecionada, Consultas
+                    rec['numero'] = `${composeNum}/${composeAno}`.substring(0, 200)
+                    hasData = true
+                } else if (
+                    // Fallback: KEY universal (todos os CSVs do TCU têm KEY)
+                    (row['KEY'] ?? '').trim()
+                ) {
+                    rec['numero'] = (row['KEY'] ?? '').trim().substring(0, 200)
+                    hasData = true
+                }
+            }
+
+            // ── Metadados extras ─────────────────────────────────────────────
+            if (Object.keys(extraMeta).length > 0) {
+                rec['metadata'] = extraMeta
             }
 
             if (hasData) batch.push(rec)
@@ -971,15 +1190,17 @@ export default function ImportacaoPage() {
                                     </div>
                                 </div>
                                 <div className="px-5 py-3 flex flex-wrap gap-2">
-                                    {headers.filter(h => mapping[h] !== '__skip').map(h => (
+                                    {headers.filter(h => mapping[h] !== '__skip').map(h => {
+                                        const fieldDef = (CATEGORY_DB_FIELDS[categoria] || []).find(f => f.key === mapping[h])
+                                        return (
                                         <div key={h} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs">
                                             <span className="font-mono text-slate-600">{h}</span>
                                             <span className="text-slate-300">→</span>
                                             <span className="font-medium text-[#1F4E79]">
-                                                {DB_FIELDS.find(f => f.key === mapping[h])?.label}
+                                                {fieldDef?.label || mapping[h]}
                                             </span>
                                         </div>
-                                    ))}
+                                    )})}
                                     {headers.filter(h => mapping[h] === '__skip').length > 0 && (
                                         <div className="text-xs text-slate-300 border border-slate-100 bg-slate-50 rounded-lg px-3 py-1.5">
                                             ignoradas: {headers.filter(h => mapping[h] === '__skip').join(', ')}
@@ -1096,8 +1317,8 @@ export default function ImportacaoPage() {
                                                     onChange={e => setMapping(prev => ({ ...prev, [col]: e.target.value as DbFieldKey }))}
                                                     className="w-full appearance-none px-3 py-2 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
                                                 >
-                                                    {DB_FIELDS.map(f => (
-                                                        <option key={f.key} value={f.key}>{f.label}{f.required ? ' *' : ''}</option>
+                                                    {(CATEGORY_DB_FIELDS[categoria] || []).map(f => (
+                                                        <option key={f.key} value={f.key}>{f.label}</option>
                                                     ))}
                                                 </select>
                                                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
