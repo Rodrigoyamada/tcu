@@ -1327,8 +1327,58 @@ export default function ImportacaoPage() {
                             </div>
 
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                                <div className="px-5 py-3.5 border-b border-slate-100 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-slate-50">
                                     <h2 className="font-semibold text-slate-700 text-sm">Mapeamento de Colunas</h2>
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-slate-500">Separador:</span>
+                                            <select 
+                                                value={delimiter}
+                                                onChange={(e) => {
+                                                    const val = e.target.value
+                                                    setDelimiter(val)
+                                                    if (currentFileRef.current) processFile(currentFileRef.current, { delimiter: val })
+                                                }}
+                                                className="px-2 py-0.5 border border-slate-200 rounded bg-white text-[#1F4E79] outline-none focus:ring-1 focus:ring-blue-100"
+                                            >
+                                                <option value="">Auto</option>
+                                                <option value=",">Vírgula (,)</option>
+                                                <option value=";">Ponto e Vírgula (;)</option>
+                                                <option value="|">Pipe (|)</option>
+                                                <option value="&#9;">Tab</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-slate-500">Codificação:</span>
+                                            <div className="flex bg-white p-0.5 rounded-lg border border-slate-200">
+                                                {(['ISO-8859-1', 'UTF-8'] as const).map(enc => (
+                                                    <button
+                                                        key={enc}
+                                                        onClick={() => {
+                                                            setEncoding(enc)
+                                                            if (currentFileRef.current) processFile(currentFileRef.current, { enc: enc })
+                                                        }}
+                                                        className={`px-2 py-0.5 rounded-md transition-all ${encoding === enc ? 'bg-[#1F4E79] text-white shadow-sm font-semibold' : 'text-slate-500 hover:text-slate-700'}`}
+                                                    >
+                                                        {enc === 'ISO-8859-1' ? 'ANSI' : 'UTF-8'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-slate-500 ml-2">Pular Cabeçalho:</span>
+                                            <input 
+                                                type="number"
+                                                value={skipRows}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0
+                                                    setSkipRows(val)
+                                                    if (currentFileRef.current) processFile(currentFileRef.current, { skip: val })
+                                                }}
+                                                className="w-10 px-1 py-0.5 border border-slate-200 rounded text-center focus:ring-1 focus:ring-blue-100 outline-none"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="divide-y divide-slate-50">
                                     {headers.map((col) => (
