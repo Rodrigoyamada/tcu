@@ -274,13 +274,14 @@ function parseDate(raw: string): string | null {
 }
 
 /** Conta o total real de linhas de dados de um CSV via streaming (sem carregar na memória) */
-async function countFileLines(file: File, enc: string, skip: number): Promise<number> {
+async function countFileLines(file: File, enc: string, skip: number, delimiter?: string): Promise<number> {
     return new Promise((resolve) => {
         let lineCount = 0
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
             encoding: enc,
+            delimiter: delimiter,
             beforeFirstChunk: (chunk) => {
                 if (skip === 0) return chunk
                 const lines = chunk.split(/\r?\n/)
@@ -341,6 +342,7 @@ export default function ImportacaoPage() {
     const [selectedSheet, setSelectedSheet] = useState<string>('')
     const [encoding, setEncoding] = useState<'ISO-8859-1' | 'UTF-8'>('ISO-8859-1')
     const [skipRows, setSkipRows] = useState(0)
+    const [delimiter, setDelimiter] = useState<string>('') // '' = auto
     const [estimatedTotal, setEstimatedTotal] = useState(0)
     const [countingLines, setCountingLines] = useState(false)
 
@@ -423,10 +425,11 @@ export default function ImportacaoPage() {
         reader.readAsArrayBuffer(file)
     }
 
-    const processFile = useCallback((file: File, options?: { enc?: 'ISO-8859-1'|'UTF-8', skip?: number }) => {
+    const processFile = useCallback((file: File, options?: { enc?: 'ISO-8859-1'|'UTF-8', skip?: number, delimiter?: string }) => {
         currentFileRef.current = file
         const currentEnc = options?.enc || encoding
         const currentSkip = options?.skip !== undefined ? options?.skip : skipRows
+        const currentDelim = options?.delimiter !== undefined ? options?.delimiter : delimiter
         
         setFileName(file.name)
         setSaveProfileName(file.name.replace(/\.[^/.]+$/, ''))
@@ -442,6 +445,7 @@ export default function ImportacaoPage() {
             Papa.parse(file, {
                 preview: 5,
                 encoding: currentEnc,
+                delimiter: currentDelim,
                 complete: (results) => {
                     const rawLines = results.data as string[][]
                     let detectedSkip = 0
@@ -466,6 +470,7 @@ export default function ImportacaoPage() {
                         skipEmptyLines: true,
                         preview: 200,
                         encoding: currentEnc,
+                        delimiter: currentDelim,
                         beforeFirstChunk: (chunk) => {
                             if (detectedSkip === 0) return chunk
                             const lines = chunk.split(/\r?\n/)
@@ -481,7 +486,7 @@ export default function ImportacaoPage() {
 
                             // Contagem real de linhas em background (streaming)
                             setCountingLines(true)
-                            const total = await countFileLines(file, currentEnc, detectedSkip)
+                            const total = await countFileLines(file, currentEnc, detectedSkip, currentDelim)
                             setEstimatedTotal(total)
                             setCountingLines(false)
                         },
@@ -593,6 +598,11 @@ export default function ImportacaoPage() {
 
         const processRow = (row: RowData) => {
             if (!row) return
+            
+            // Se houver apenas uma coluna e ela contiver o separador pipe (mesmo sem aspas), 
+            // avisa ou tenta tratar (embora o PapaParse devesse lidar se o delimitador estiver certo)
+            // Mas aqui o processRow já recebe a linha parseada.
+            
             const rec: Record<string, any> = { tipo: categoria, importacao_id: importId }
             const extraMeta: Record<string, string> = {}
             let composeNum = ''
@@ -654,6 +664,7 @@ export default function ImportacaoPage() {
                 header: true,
                 skipEmptyLines: true,
                 encoding: encoding,
+                delimiter: delimiter,
                 beforeFirstChunk: (chunk) => {
                     if (skipRows === 0) return chunk
                     const lines = chunk.split(/\r?\n/)
@@ -1128,6 +1139,24 @@ export default function ImportacaoPage() {
                                             Pré-visualização (Primeiros Registros)
                                         </h3>
                                         <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <span className="text-slate-500">Separador:</span>
+                                                <select 
+                                                    value={delimiter}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value
+                                                        setDelimiter(val)
+                                                        if (currentFileRef.current) processFile(currentFileRef.current, { delimiter: val })
+                                                    }}
+                                                    className="px-2 py-0.5 border border-slate-200 rounded bg-white text-[#1F4E79] outline-none focus:ring-1 focus:ring-blue-100"
+                                                >
+                                                    <option value="">Auto</option>
+                                                    <option value=",">Vírgula (,)</option>
+                                                    <option value=";">Ponto e Vírgula (;)</option>
+                                                    <option value="|">Pipe (|)</option>
+                                                    <option value="&#9;">Tab</option>
+                                                </select>
+                                            </div>
                                             <div className="flex items-center gap-2 text-xs">
                                                 <span className="text-slate-500">Codificação:</span>
                                                 <div className="flex bg-slate-100 p-0.5 rounded-lg">
