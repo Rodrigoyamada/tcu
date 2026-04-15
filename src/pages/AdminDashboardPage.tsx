@@ -190,11 +190,20 @@ export default function AdminDashboardPage() {
             const sow = startOfWeek()
             const sod = startOfDay()
 
+            // 1. Calcular datas dos últimos 7 dias para as tendências
+            const last7Days = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date()
+                d.setDate(d.getDate() - i)
+                d.setHours(0, 0, 0, 0)
+                return d.toISOString()
+            }).reverse()
+
             const [
                 uTotal, uMes, uSemana, uHoje,
                 pTotal, pMes, pSemana, pHoje,
                 recentUsers, recentPareceres,
-                categoriesRaw
+                categoriesRaw,
+                uTrend, pTrend
             ] = await Promise.all([
                 countQuery('app_users'),
                 countQuery('app_users', som),
@@ -206,7 +215,10 @@ export default function AdminDashboardPage() {
                 countQuery('pareceres', sod),
                 supabase.from('app_users').select('id, name, email, created_at, role').order('created_at', { ascending: false }).limit(5),
                 supabase.from('pareceres').select('id, title, user_id, created_at, content').order('created_at', { ascending: false }).limit(5),
-                supabase.rpc('count_jurisprudencia_by_type') // Usaremos RPC se possível, senão fallback manual
+                supabase.rpc('count_jurisprudencia_by_type'),
+                // Busca tendência real nos últimos 7 dias
+                Promise.all(last7Days.map(day => countQuery('app_users', day))),
+                Promise.all(last7Days.map(day => countQuery('pareceres', day)))
             ])
 
             // Fallback se RPC falhar (muito comum em migrations não aplicadas)
@@ -224,12 +236,17 @@ export default function AdminDashboardPage() {
                 dbSummary = categoriesRaw.data as CategoryStat[]
             }
 
+            // Normaliza as tendências para serem relativas ao dia anterior (crescimento diário)
+            const getDailyGrowth = (trend: number[]) => {
+                return trend.map((v, i) => i === 0 ? v : v - trend[i-1])
+            }
+
             setStats({
-                usuarios:  { total: uTotal, mes: uMes, semana: uSemana, hoje: uHoje, sparkline: [uMes/4, uMes/2, uSemana, uHoje] },
-                pareceres: { total: pTotal, mes: pMes, semana: pSemana, hoje: pHoje, sparkline: [pMes/4, pMes/2, pSemana, pHoje] },
+                usuarios:  { total: uTotal, mes: uMes, semana: uSemana, hoje: uHoje, sparkline: getDailyGrowth(uTrend) },
+                pareceres: { total: pTotal, mes: pMes, semana: pSemana, hoje: pHoje, sparkline: getDailyGrowth(pTrend) },
                 recentUsers: (recentUsers.data || []) as RecentUser[],
                 recentPareceres: (recentPareceres.data || []) as RecentParecer[],
-                databaseSummary: dbSummary
+                databaseSummary: dbSummary.sort((a, b) => b.count - a.count)
             })
             setLastUpdated(new Date())
         } catch (err) {
@@ -429,20 +446,25 @@ export default function AdminDashboardPage() {
                                             [1,2,3,4].map(i => <div key={i} className="h-4 bg-white/10 rounded animate-pulse" />)
                                         ) : stats?.databaseSummary.length === 0 ? (
                                             <p className="text-xs text-blue-200/60">Nenhum dado importado ainda.</p>
-                                        ) : stats?.databaseSummary.map(cat => (
-                                            <div key={cat.tipo} className="space-y-1.5">
-                                                <div className="flex justify-between text-[11px] font-medium">
-                                                    <span className="text-blue-100 capitalize">{cat.tipo.replace(/_/g, ' ')}</span>
-                                                    <span>{cat.count.toLocaleString('pt-BR')}</span>
-                                                </div>
-                                                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                                                    <div 
-                                                        className="h-full bg-blue-400 rounded-full" 
-                                                        style={{ width: `${Math.min(100, (cat.count / (stats?.usuarios.total || 1)) * 10)}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
+                                        ) : (
+                                            (() => {
+                                                const totalBase = stats?.databaseSummary.reduce((acc, c) => acc + c.count, 0) || 1;
+                                                return stats?.databaseSummary.map(cat => (
+                                                    <div key={cat.tipo} className="space-y-1.5">
+                                                        <div className="flex justify-between text-[11px] font-medium">
+                                                            <span className="text-blue-100 capitalize">{cat.tipo.replace(/_/g, ' ')}</span>
+                                                            <span>{cat.count.toLocaleString('pt-BR')}</span>
+                                                        </div>
+                                                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className="h-full bg-blue-400 rounded-full transition-all duration-1000" 
+                                                                style={{ width: `${Math.max(2, (cat.count / totalBase) * 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ));
+                                            })()
+                                        )}
                                     </div>
                                     <button className="w-full mt-6 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors border border-white/10">
                                         Gerenciar Importações
