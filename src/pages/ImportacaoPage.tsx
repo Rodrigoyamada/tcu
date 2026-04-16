@@ -274,7 +274,80 @@ function parseDate(raw: string): string | null {
     return null
 }
 
-/** Conta o total real de linhas de dados de um CSV via streaming (sem carregar na memória) */
+/**
+ * Parser CSV minimalista (state-machine) que suporta:
+ * - Campos quoted com \n internos (multiline)
+ * - Aspas escapadas com ""
+ * - Qualquer délimitador
+ * Equivalente ao csv.reader do Python (RFC 4180)
+ */
+function parseCSVPreview(text: string, delimiter: string, maxRows = 10): { headers: string[], rows: RowData[] } {
+    const DELIM = delimiter
+    const QUOTE = '"'
+    
+    let inQuote = false
+    let field = ''
+    let currentRow: string[] = []
+    const allRows: string[][] = []
+    
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i]
+        
+        if (inQuote) {
+            if (ch === QUOTE) {
+                if (text[i + 1] === QUOTE) {
+                    field += QUOTE  // aspas escapadas ""
+                    i++
+                } else {
+                    inQuote = false  // fim do campo quoted
+                }
+            } else {
+                field += ch  // conteúdo dentro do campo (inclusive \n)
+            }
+        } else {
+            if (ch === QUOTE && field === '') {
+                inQuote = true
+            } else if (ch === DELIM) {
+                currentRow.push(field)
+                field = ''
+            } else if (ch === '\n') {
+                currentRow.push(field)
+                field = ''
+                if (currentRow.some(f => f.trim() !== '')) {
+                    allRows.push([...currentRow])
+                }
+                currentRow = []
+                if (allRows.length > maxRows) break
+            } else if (ch === '\r') {
+                // ignorar CR do CRLF
+            } else {
+                field += ch
+            }
+        }
+    }
+    
+    // Última linha sem \n final
+    if (field !== '' || currentRow.length > 0) {
+        currentRow.push(field)
+        if (currentRow.some(f => f.trim() !== '')) allRows.push(currentRow)
+    }
+    
+    if (allRows.length === 0) return { headers: [], rows: [] }
+    
+    const headers = allRows[0]
+    const rows: RowData[] = []
+    for (let i = 1; i < allRows.length; i++) {
+        const row: RowData = {}
+        for (let j = 0; j < headers.length; j++) {
+            row[headers[j]] = allRows[i][j] ?? ''
+        }
+        rows.push(row)
+    }
+    
+    return { headers, rows }
+}
+
+
 async function countFileLines(file: File, enc: string, skip: number, delimiter?: string, ignoreQuotes?: boolean): Promise<number> {
     return new Promise((resolve) => {
         let lineCount = 0
@@ -453,18 +526,17 @@ export default function ImportacaoPage() {
         const isLarge = file.size > 5 * 1024 * 1024 // > 5MB
 
         if (ext === 'csv' || ext === 'txt') {
-            // Estratégia: lê os primeiros 4MB para garantir que o PapaParse receba
-            // texto decodificado (não bytes) e possa lidar com campos multilinhas (HTML de 600KB/registro)
-            // 4MB cobre ~6 acórdãos completos ou ~200 registros de outros tipos
+            // Lê os primeiros 4MB em ArrayBuffer e decodifica com o encoding correto
+            // Não passa File para o PapaParse → evita todo problema de chunking/multiline
             const PREVIEW_BYTES = 4 * 1024 * 1024
             const fullReader = new FileReader()
             fullReader.onload = async (ev) => {
                 const raw = ev.target!.result as ArrayBuffer
                 const decoder = new TextDecoder(currentEnc === 'ISO-8859-1' ? 'iso-8859-1' : 'utf-8')
-                let chunk = decoder.decode(new Uint8Array(raw))
+                const chunk = decoder.decode(new Uint8Array(raw))
 
-                // Detectar delimitador pela primeira linha (o cabeçalho)
-                const firstNewline = chunk.search(/\r?\n/)
+                // Detectar delimitador pela primeira linha (o cabeçalho — nunca tem multiline)
+                const firstNewline = chunk.indexOf('\n')
                 const headerLine = firstNewline > 0 ? chunk.slice(0, firstNewline) : chunk.slice(0, 2000)
                 let finalDelim = currentDelim
                 if (!finalDelim) {
@@ -481,60 +553,23 @@ export default function ImportacaoPage() {
                     }
                 }
 
-                // Parsear passando string (não File) para o PapaParse evitar problemas de chunking
-                const parseConfig: any = {}
-                if (finalDelim) parseConfig.delimiter = finalDelim
-                if (currentIgnore) parseConfig.quoteChar = '\x00'
+                // Usar nosso parser RFC-4180 próprio (suporta campos multilinhas, igual ao Python csv.reader)
+                const delim = finalDelim || ','
+                const { headers, rows } = parseCSVPreview(chunk, delim, 10)
 
-                let previewResult = Papa.parse(chunk, {
-                    ...parseConfig,
-                    header: true,
-                    skipEmptyLines: true,
-                    preview: 200,
-                })
-
-                let fields = previewResult.meta.fields || []
-                let rows = previewResult.data as RowData[]
-
-                // Se falhou (1 coluna gigante), tentar sem quoteChar como fallback
-                if (fields.length <= 1) {
-                    previewResult = Papa.parse(chunk, {
-                        ...parseConfig,
-                        quoteChar: '\x00',
-                        header: true,
-                        skipEmptyLines: true,
-                        preview: 200,
-                    })
-                    fields = previewResult.meta.fields || []
-                    rows = previewResult.data as RowData[]
-                    // Limpar aspas dos nomes de campo
-                    fields = fields.map(f => f.replace(/^"|"$/g, ''))
-                    rows = rows.map(row => {
-                        const clean: RowData = {}
-                        for (const [k, v] of Object.entries(row)) {
-                            const key = k.replace(/^"|"$/g, '')
-                            clean[key] = typeof v === 'string' ? v.replace(/^"|"$/g, '') : v
-                        }
-                        return clean
-                    })
-                    if (fields.length > 1) setIgnoreQuotes(true)
-                }
-
-                if (rows.length === 0 || fields.length <= 1) {
-                    setImportError('Arquivo CSV com formato inválido. Verifique o separador e a codificação.')
+                if (headers.length <= 1) {
+                    setImportError(`Arquivo CSV não pôde ser interpretado. Separador detectado: "${delim}". Tente selecioná-lo manualmente.`)
                     return
                 }
 
-                afterParse(fields, rows)
+                afterParse(headers, rows)
 
                 setCountingLines(true)
-                const total = await countFileLines(file, currentEnc, 0, finalDelim, currentIgnore)
+                const total = await countFileLines(file, currentEnc, 0, finalDelim, false)
                 setEstimatedTotal(total)
                 setCountingLines(false)
             }
             fullReader.readAsArrayBuffer(file.slice(0, PREVIEW_BYTES))
-
-
 
         } else if (ext === 'xlsx' || ext === 'xls') {
             const reader = new FileReader()
