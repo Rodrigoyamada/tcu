@@ -417,7 +417,7 @@ export default function ImportacaoPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [sheetNames, setSheetNames] = useState<string[]>([])
     const [selectedSheet, setSelectedSheet] = useState<string>('')
-    const [encoding, setEncoding] = useState<'ISO-8859-1' | 'UTF-8'>('ISO-8859-1')
+    const [encoding, setEncoding] = useState<'ISO-8859-1' | 'UTF-8'>('UTF-8')
     const [skipRows, setSkipRows] = useState(0)
     const [delimiter, setDelimiter] = useState<string>('') // '' = auto
     const [ignoreQuotes, setIgnoreQuotes] = useState(false)
@@ -531,8 +531,22 @@ export default function ImportacaoPage() {
             const fullReader = new FileReader()
             fullReader.onload = async (ev) => {
                 const raw = ev.target!.result as ArrayBuffer
-                const decoder = new TextDecoder(currentEnc === 'ISO-8859-1' ? 'iso-8859-1' : 'utf-8')
-                const chunk = decoder.decode(new Uint8Array(raw))
+                const rawBytes = new Uint8Array(raw)
+
+                // Auto-detectar encoding: tenta UTF-8 estrito (fatal:true), cai para ISO-8859-1
+                let detectedEnc: 'UTF-8' | 'ISO-8859-1' = currentEnc
+                if (options?.enc === undefined) {
+                    try {
+                        new TextDecoder('utf-8', { fatal: true }).decode(rawBytes)
+                        detectedEnc = 'UTF-8'
+                    } catch {
+                        detectedEnc = 'ISO-8859-1'
+                    }
+                    if (detectedEnc !== currentEnc) setEncoding(detectedEnc)
+                }
+
+                const decoder = new TextDecoder(detectedEnc === 'ISO-8859-1' ? 'iso-8859-1' : 'utf-8')
+                const chunk = decoder.decode(rawBytes)
 
                 // Detectar delimitador pela primeira linha (o cabeçalho — nunca tem multiline)
                 const firstNewline = chunk.indexOf('\n')
@@ -1347,6 +1361,7 @@ export default function ImportacaoPage() {
                                                         </button>
                                                     ))}
                                                 </div>
+                                                <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-semibold">auto</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-xs">
                                                 <span className="text-slate-500 ml-2">Pular Cabeçalho:</span>
