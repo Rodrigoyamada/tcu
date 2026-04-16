@@ -453,36 +453,21 @@ export default function ImportacaoPage() {
         const isLarge = file.size > 5 * 1024 * 1024 // > 5MB
 
         if (ext === 'csv' || ext === 'txt') {
-            // Lê as primeiras 8KB do arquivo com o encoding correto para inspecionar o cabeçalho REAL
-            const sampleReader = new FileReader()
-            sampleReader.onload = async (ev) => {
+            // Estratégia: lê os primeiros 4MB para garantir que o PapaParse receba
+            // texto decodificado (não bytes) e possa lidar com campos multilinhas (HTML de 600KB/registro)
+            // 4MB cobre ~6 acórdãos completos ou ~200 registros de outros tipos
+            const PREVIEW_BYTES = 4 * 1024 * 1024
+            const fullReader = new FileReader()
+            fullReader.onload = async (ev) => {
                 const raw = ev.target!.result as ArrayBuffer
                 const decoder = new TextDecoder(currentEnc === 'ISO-8859-1' ? 'iso-8859-1' : 'utf-8')
-                const sample = decoder.decode(new Uint8Array(raw))
-                const sampleLines = sample.split(/\r?\n/).filter(l => l.trim().length > 0)
-                
-                // Detectar linhas a pular
-                let detectedSkip = 0
-                for (let i = 0; i < Math.min(sampleLines.length, 10); i++) {
-                    const lineStr = sampleLines[i].toLowerCase()
-                    if (lineStr.includes('atualização') || lineStr.includes('versão')) {
-                        detectedSkip = i + 1
-                    } else if (/(numero|acordao|nracordao|ementa|relator|key|tipo)/i.test(lineStr)) {
-                        detectedSkip = i
-                        break
-                    }
-                }
-                if (options?.skip === undefined && detectedSkip !== currentSkip) {
-                    setSkipRows(detectedSkip)
-                }
+                let chunk = decoder.decode(new Uint8Array(raw))
 
-                // Identificar o separador pela linha de cabeçalho real
-                const headerLine = sampleLines[detectedSkip] || ''
+                // Detectar delimitador pela primeira linha (o cabeçalho)
+                const firstNewline = chunk.search(/\r?\n/)
+                const headerLine = firstNewline > 0 ? chunk.slice(0, firstNewline) : chunk.slice(0, 2000)
                 let finalDelim = currentDelim
-                let finalIgnore = currentIgnore
-
                 if (!finalDelim) {
-                    // Conta candidatos e escolhe o mais frequente
                     const counts: Record<string, number> = {
                         '|': (headerLine.match(/\|/g) || []).length,
                         ';': (headerLine.match(/;/g) || []).length,
@@ -496,44 +481,60 @@ export default function ImportacaoPage() {
                     }
                 }
 
-                // Se o separador for pipe, forçar ignoreQuotes para lidar com aspas quebradas do TCU
-                if (finalDelim === '|' && !currentIgnore) {
-                    finalIgnore = true
-                    setIgnoreQuotes(true)
-                }
+                // Parsear passando string (não File) para o PapaParse evitar problemas de chunking
+                const parseConfig: any = {}
+                if (finalDelim) parseConfig.delimiter = finalDelim
+                if (currentIgnore) parseConfig.quoteChar = '\x00'
 
-                const finalParseConfig: any = { encoding: currentEnc }
-                if (finalDelim) finalParseConfig.delimiter = finalDelim
-                if (finalIgnore) finalParseConfig.quoteChar = '\x00'
-
-                Papa.parse(file, {
-                    ...finalParseConfig,
+                let previewResult = Papa.parse(chunk, {
+                    ...parseConfig,
                     header: true,
                     skipEmptyLines: true,
                     preview: 200,
-                    beforeFirstChunk: (chunk: string) => {
-                        if (detectedSkip === 0) return chunk
-                        const lines = chunk.split(/\r?\n/)
-                        return lines.slice(detectedSkip).join('\n')
-                    },
-                    complete: async ({ data, meta }: any) => {
-                        const rows = data as RowData[]
-                        if (rows.length === 0) {
-                            setImportError('Arquivo CSV vazio ou com formato inválido.')
-                            return
-                        }
-                        afterParse(meta.fields || [], rows)
-
-                        // Contagem real de linhas em background (streaming)
-                        setCountingLines(true)
-                        const total = await countFileLines(file, currentEnc, detectedSkip, finalDelim, finalIgnore)
-                        setEstimatedTotal(total)
-                        setCountingLines(false)
-                    },
-                    error: () => setImportError('Erro ao ler o arquivo CSV.'),
                 })
+
+                let fields = previewResult.meta.fields || []
+                let rows = previewResult.data as RowData[]
+
+                // Se falhou (1 coluna gigante), tentar sem quoteChar como fallback
+                if (fields.length <= 1) {
+                    previewResult = Papa.parse(chunk, {
+                        ...parseConfig,
+                        quoteChar: '\x00',
+                        header: true,
+                        skipEmptyLines: true,
+                        preview: 200,
+                    })
+                    fields = previewResult.meta.fields || []
+                    rows = previewResult.data as RowData[]
+                    // Limpar aspas dos nomes de campo
+                    fields = fields.map(f => f.replace(/^"|"$/g, ''))
+                    rows = rows.map(row => {
+                        const clean: RowData = {}
+                        for (const [k, v] of Object.entries(row)) {
+                            const key = k.replace(/^"|"$/g, '')
+                            clean[key] = typeof v === 'string' ? v.replace(/^"|"$/g, '') : v
+                        }
+                        return clean
+                    })
+                    if (fields.length > 1) setIgnoreQuotes(true)
+                }
+
+                if (rows.length === 0 || fields.length <= 1) {
+                    setImportError('Arquivo CSV com formato inválido. Verifique o separador e a codificação.')
+                    return
+                }
+
+                afterParse(fields, rows)
+
+                setCountingLines(true)
+                const total = await countFileLines(file, currentEnc, 0, finalDelim, currentIgnore)
+                setEstimatedTotal(total)
+                setCountingLines(false)
             }
-            sampleReader.readAsArrayBuffer(file.slice(0, 8192)) // Lê apenas os primeiros 8KB para detecção
+            fullReader.readAsArrayBuffer(file.slice(0, PREVIEW_BYTES))
+
+
 
         } else if (ext === 'xlsx' || ext === 'xls') {
             const reader = new FileReader()
