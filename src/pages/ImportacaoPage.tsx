@@ -453,77 +453,88 @@ export default function ImportacaoPage() {
         const isLarge = file.size > 5 * 1024 * 1024 // > 5MB
 
         if (ext === 'csv' || ext === 'txt') {
-            // Primeiro, vamos tentar ler as primeiras linhas para detectar metadados
-            Papa.parse(file, {
-                ...parseConfig,
-                preview: 5,
-                complete: (results: any) => {
-                    const rawLines = results.data as string[][]
-                    let detectedSkip = 0
-                    
-                    // Fallback agressivo: se detectou 1 coluna e ela tá cheia de pipes, a auto-detecção falhou miseravelmente
-                    let forcePipeAndIgnoreQuotes = false
-                    if (!currentDelim && rawLines.length > 0 && rawLines[0].length <= 2) {
-                        const firstCell = String(rawLines[0][0])
-                        if (firstCell.includes('|') && firstCell.includes('TIPO')) {
-                            forcePipeAndIgnoreQuotes = true
-                        }
+            // Lê as primeiras 8KB do arquivo com o encoding correto para inspecionar o cabeçalho REAL
+            const sampleReader = new FileReader()
+            sampleReader.onload = async (ev) => {
+                const raw = ev.target!.result as ArrayBuffer
+                const decoder = new TextDecoder(currentEnc === 'ISO-8859-1' ? 'iso-8859-1' : 'utf-8')
+                const sample = decoder.decode(new Uint8Array(raw))
+                const sampleLines = sample.split(/\r?\n/).filter(l => l.trim().length > 0)
+                
+                // Detectar linhas a pular
+                let detectedSkip = 0
+                for (let i = 0; i < Math.min(sampleLines.length, 10); i++) {
+                    const lineStr = sampleLines[i].toLowerCase()
+                    if (lineStr.includes('atualização') || lineStr.includes('versão')) {
+                        detectedSkip = i + 1
+                    } else if (/(numero|acordao|nracordao|ementa|relator|key|tipo)/i.test(lineStr)) {
+                        detectedSkip = i
+                        break
                     }
-
-                    const finalDelim = forcePipeAndIgnoreQuotes ? '|' : currentDelim
-                    const finalIgnore = forcePipeAndIgnoreQuotes ? true : currentIgnore
-                    if (forcePipeAndIgnoreQuotes && !currentDelim) {
-                        setDelimiter('|')
-                        setIgnoreQuotes(true)
-                    }
-
-                    // Se a primeira linha contém "Atualização" ou algo do tipo, vamos procurar o cabeçalho real
-                    for(let i=0; i < rawLines.length; i++) {
-                        const lineStr = (rawLines[i] || []).join(',').toLowerCase()
-                        if (lineStr.includes('atualização') || lineStr.includes('versão') || lineStr.trim() === '') {
-                            detectedSkip = i + 1
-                        } else if (/(numero|acordao|nracordao|ementa|relator)/i.test(lineStr)) {
-                            detectedSkip = i
-                            break
-                        }
-                    }
-                    
-                    if (currentSkip !== detectedSkip && options?.skip === undefined) {
-                        setSkipRows(detectedSkip)
-                    }
-
-                    const finalParseConfig: any = { encoding: currentEnc }
-                    if (finalDelim) finalParseConfig.delimiter = finalDelim
-                    if (finalIgnore) finalParseConfig.quoteChar = '\x00'
-
-                    Papa.parse(file, {
-                        ...finalParseConfig,
-                        header: true,
-                        skipEmptyLines: true,
-                        preview: 200,
-                        beforeFirstChunk: (chunk: string) => {
-                            if (detectedSkip === 0) return chunk
-                            const lines = chunk.split(/\r?\n/)
-                            return lines.slice(detectedSkip).join('\n')
-                        },
-                        complete: async ({ data, meta }) => {
-                            const rows = data as RowData[]
-                            if (rows.length === 0) {
-                                setImportError('Arquivo CSV vazio ou com formato inválido.')
-                                return
-                            }
-                            afterParse(meta.fields || [], rows)
-
-                            // Contagem real de linhas em background (streaming)
-                            setCountingLines(true)
-                            const total = await countFileLines(file, currentEnc, detectedSkip, finalDelim, finalIgnore)
-                            setEstimatedTotal(total)
-                            setCountingLines(false)
-                        },
-                        error: () => setImportError('Erro ao ler o arquivo CSV.'),
-                    })
                 }
-            })
+                if (options?.skip === undefined && detectedSkip !== currentSkip) {
+                    setSkipRows(detectedSkip)
+                }
+
+                // Identificar o separador pela linha de cabeçalho real
+                const headerLine = sampleLines[detectedSkip] || ''
+                let finalDelim = currentDelim
+                let finalIgnore = currentIgnore
+
+                if (!finalDelim) {
+                    // Conta candidatos e escolhe o mais frequente
+                    const counts: Record<string, number> = {
+                        '|': (headerLine.match(/\|/g) || []).length,
+                        ';': (headerLine.match(/;/g) || []).length,
+                        ',': (headerLine.match(/,/g) || []).length,
+                        '\t': (headerLine.match(/\t/g) || []).length,
+                    }
+                    const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]
+                    if (best && best[1] > 2) {
+                        finalDelim = best[0]
+                        setDelimiter(finalDelim)
+                    }
+                }
+
+                // Se o separador for pipe, forçar ignoreQuotes para lidar com aspas quebradas do TCU
+                if (finalDelim === '|' && !currentIgnore) {
+                    finalIgnore = true
+                    setIgnoreQuotes(true)
+                }
+
+                const finalParseConfig: any = { encoding: currentEnc }
+                if (finalDelim) finalParseConfig.delimiter = finalDelim
+                if (finalIgnore) finalParseConfig.quoteChar = '\x00'
+
+                Papa.parse(file, {
+                    ...finalParseConfig,
+                    header: true,
+                    skipEmptyLines: true,
+                    preview: 200,
+                    beforeFirstChunk: (chunk: string) => {
+                        if (detectedSkip === 0) return chunk
+                        const lines = chunk.split(/\r?\n/)
+                        return lines.slice(detectedSkip).join('\n')
+                    },
+                    complete: async ({ data, meta }: any) => {
+                        const rows = data as RowData[]
+                        if (rows.length === 0) {
+                            setImportError('Arquivo CSV vazio ou com formato inválido.')
+                            return
+                        }
+                        afterParse(meta.fields || [], rows)
+
+                        // Contagem real de linhas em background (streaming)
+                        setCountingLines(true)
+                        const total = await countFileLines(file, currentEnc, detectedSkip, finalDelim, finalIgnore)
+                        setEstimatedTotal(total)
+                        setCountingLines(false)
+                    },
+                    error: () => setImportError('Erro ao ler o arquivo CSV.'),
+                })
+            }
+            sampleReader.readAsArrayBuffer(file.slice(0, 8192)) // Lê apenas os primeiros 8KB para detecção
+
         } else if (ext === 'xlsx' || ext === 'xls') {
             const reader = new FileReader()
             reader.onload = (e) => {
