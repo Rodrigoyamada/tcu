@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import {
     Users, FileText, TrendingUp, Calendar, Clock,
-    Sun, BarChart2, RefreshCw, ChevronRight,
-    ArrowUpRight, Database, HardDrive, List,
+    Sun, BarChart2, RefreshCw,
+    Database, HardDrive,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import type { CategoriaTCU } from '../lib/supabase'
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -506,7 +506,6 @@ export default function ImportacaoPage() {
     const processFile = useCallback((file: File, options?: { enc?: 'ISO-8859-1'|'UTF-8', skip?: number, delimiter?: string, ignoreQuotes?: boolean }) => {
         currentFileRef.current = file
         const currentEnc = options?.enc || encoding
-        const currentSkip = options?.skip !== undefined ? options?.skip : skipRows
         const currentDelim = options?.delimiter !== undefined ? options?.delimiter : delimiter
         const currentIgnore = options?.ignoreQuotes !== undefined ? options?.ignoreQuotes : ignoreQuotes
         
@@ -737,42 +736,132 @@ export default function ImportacaoPage() {
         }
 
         if (ext === 'csv' || ext === 'txt') {
-            const parseConfig: any = { encoding: encoding }
-            if (delimiter) parseConfig.delimiter = delimiter
-            if (ignoreQuotes) parseConfig.quoteChar = '\x00'
+            // Para arquivos grandes (ex: 424MB) com campos multilinhas (HTML até 600KB/registro),
+            // o PapaParse com File quebra nos boundary dos chunks.
+            // Usamos FileReader em fatias de 8MB + nosso parser stateful (RFC-4180) entre chunks.
+            const CHUNK_SIZE = 8 * 1024 * 1024  // 8MB por chunk
+            const finalDelim = delimiter || ','
+            const decoder = new TextDecoder(encoding === 'ISO-8859-1' ? 'iso-8859-1' : 'utf-8')
 
-            Papa.parse(file, {
-                ...parseConfig,
-                header: true,
-                skipEmptyLines: true,
-                beforeFirstChunk: (chunk: string) => {
-                    if (skipRows === 0) return chunk
-                    const lines = chunk.split(/\r?\n/)
-                    return lines.slice(skipRows).join('\n')
-                },
-                step: async (results, parser) => {
-                    processRow(results.data as RowData)
-                    if (batch.length >= BATCH_SIZE) {
-                        parser.pause()
-                        await insertBatch()
-                        parser.resume()
+            let fileOffset = 0
+            let parsedHeader = false
+            let csvHeaders: string[] = []
+            // Estado persistente entre chunks
+            let leftover = ''  // texto não processado do chunk anterior
+            let inQuoteState = false
+
+            const readNextChunk = () => {
+                const slice = file.slice(fileOffset, fileOffset + CHUNK_SIZE)
+                const chunkReader = new FileReader()
+                chunkReader.onload = async (ev) => {
+                    const raw = ev.target!.result as ArrayBuffer
+                    const decoded = decoder.decode(new Uint8Array(raw))
+                    const text = leftover + decoded
+                    leftover = ''
+
+                    // Processar char a char mantendo estado de inQuote entre chunks
+                    let field = ''
+                    let currentRow: string[] = []
+                    let i = 0
+
+                    // Se estava dentro de aspas no chunk anterior, retoma
+                    let localInQuote = inQuoteState
+
+                    for (; i < text.length; i++) {
+                        const ch = text[i]
+                        if (localInQuote) {
+                            if (ch === '"') {
+                                if (text[i + 1] === '"') { field += '"'; i++ }
+                                else localInQuote = false
+                            } else {
+                                field += ch
+                            }
+                        } else {
+                            if (ch === '"' && field === '') {
+                                localInQuote = true
+                            } else if (ch === finalDelim) {
+                                currentRow.push(field); field = ''
+                            } else if (ch === '\n') {
+                                currentRow.push(field); field = ''
+                                if (currentRow.some(f => f.trim() !== '')) {
+                                    if (!parsedHeader) {
+                                        csvHeaders = currentRow
+                                        parsedHeader = true
+                                    } else {
+                                        // Monta RowData e processa
+                                        const row: RowData = {}
+                                        for (let j = 0; j < csvHeaders.length; j++) {
+                                            row[csvHeaders[j]] = currentRow[j] ?? ''
+                                        }
+                                        processRow(row)
+                                        if (batch.length >= BATCH_SIZE) {
+                                            // Pausa para inserir (aguarda Promise antes de continuar)
+                                            inQuoteState = localInQuote
+                                            leftover = text.slice(i + 1)
+                                            await insertBatch()
+                                            // Continua lendo da posição salva em leftover
+                                            text.slice(0) // noop, apenas clareza
+                                            // Avança fileOffset e continua
+                                            fileOffset += CHUNK_SIZE
+                                            if (fileOffset < file.size) {
+                                                readNextChunk()
+                                            } else {
+                                                await finalize()
+                                            }
+                                            return
+                                        }
+                                    }
+                                }
+                                currentRow = []
+                            } else if (ch === '\r') {
+                                // ignorar CR
+                            } else {
+                                field += ch
+                            }
+                        }
                     }
-                },
-                complete: async () => {
-                    await insertBatch()
-                    await supabase.from('importacoes').update({
-                        status: processedCount === 0 && errorsCount > 0 ? 'erro' : 'concluido',
-                        total_linhas: processedCount,
-                        linha_atual: processedCount,
-                        fim_em: new Date().toISOString()
-                    }).eq('id', importId)
-                    setStep('done')
-                },
-                error: (err) => {
-                    setImportError('Erro no fluxo: ' + err.message)
-                    setStep('upload')
+
+                    // Salvar estado para próximo chunk
+                    inQuoteState = localInQuote
+                    // Qualquer linha incompleta vira leftover
+                    if (currentRow.length > 0 || field !== '') {
+                        // Reconstrói o fragmento incompleto
+                        leftover = currentRow.join(finalDelim) + (currentRow.length > 0 ? finalDelim : '') + field
+                        if (localInQuote) leftover = '"' + leftover  // readiciona aspa se estava dentro
+                    }
+
+                    fileOffset += CHUNK_SIZE
+                    if (fileOffset < file.size) {
+                        readNextChunk()
+                    } else {
+                        // Processar último fragmento se houver
+                        if (leftover.trim() !== '') {
+                            const lastRow = leftover.split(finalDelim)
+                            const row: RowData = {}
+                            for (let j = 0; j < csvHeaders.length; j++) {
+                                row[csvHeaders[j]] = (lastRow[j] ?? '').replace(/^"|"$/g, '')
+                            }
+                            if (Object.values(row).some(v => v.trim() !== '')) processRow(row)
+                        }
+                        await finalize()
+                    }
                 }
-            })
+                chunkReader.readAsArrayBuffer(slice)
+            }
+
+            const finalize = async () => {
+                await insertBatch()
+                await supabase.from('importacoes').update({
+                    status: processedCount === 0 && errorsCount > 0 ? 'erro' : 'concluido',
+                    total_linhas: processedCount,
+                    linha_atual: processedCount,
+                    fim_em: new Date().toISOString()
+                }).eq('id', importId)
+                setStep('done')
+            }
+
+            readNextChunk()
+
         } else {
             // Excel: Para arquivos grandes, o ideal é re-ler agora sem o range de amostragem
             const reader = new FileReader()
