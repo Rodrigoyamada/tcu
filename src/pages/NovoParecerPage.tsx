@@ -84,13 +84,19 @@ export default function NovoParecerPage() {
 
                 {/* Description */}
                 <div className="space-y-1.5">
-                    <label htmlFor="parecer-description" className="block text-sm font-medium text-slate-700">
-                        Breve Descrição
-                    </label>
+                    <div className="flex justify-between items-center">
+                        <label htmlFor="parecer-description" className="block text-sm font-medium text-slate-700">
+                            Breve Descrição
+                        </label>
+                        <span className={`text-[10px] font-medium ${description.length >= 300 ? 'text-red-500' : 'text-slate-400'}`}>
+                            {description.length}/300
+                        </span>
+                    </div>
                     <textarea
                         id="parecer-description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
+                        maxLength={300}
                         placeholder="Resumo do assunto ou contexto do parecer…"
                         rows={3}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2E75B6] focus:border-transparent transition-all resize-none"

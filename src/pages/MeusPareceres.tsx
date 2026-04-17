@@ -150,12 +150,18 @@ export default function MeusPareceres() {
                                             placeholder="Título"
                                             className="w-full text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
                                         />
-                                        <input
-                                            value={editDesc}
-                                            onChange={(e) => setEditDesc(e.target.value)}
-                                            placeholder="Descrição (opcional)"
-                                            className="w-full text-sm text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                value={editDesc}
+                                                onChange={(e) => setEditDesc(e.target.value)}
+                                                maxLength={300}
+                                                placeholder="Descrição (opcional)"
+                                                className="w-full text-sm text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-[#2E75B6] pr-12"
+                                            />
+                                            <span className={`absolute right-3 top-2.5 text-[9px] font-medium ${editDesc.length >= 300 ? 'text-red-500' : 'text-slate-400'}`}>
+                                                {editDesc.length}/300
+                                            </span>
+                                        </div>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={(e) => saveEdit(p.id, e)}
