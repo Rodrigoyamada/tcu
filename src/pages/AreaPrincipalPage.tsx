@@ -83,7 +83,7 @@ export default function AreaPrincipalPage() {
                 }),
             })
 
-            if (!response.ok) {
+            if (!response.ok && response.status !== 202) {
                 if (response.status === 404) throw new Error(`Webhook n8n não encontrado (404).`)
                 throw new Error(`Falha de comunicação 🚀: ${response.status}`)
             }

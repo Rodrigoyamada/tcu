@@ -2,24 +2,18 @@ export default async (request) => {
   // Read raw payload from the browser request
   const body = await request.text();
 
-  // Send request transparently to N8n
-  const n8nResponse = await fetch(
-    "https://n8n.srv1291896.hstgr.cloud/webhook/rag-tcu",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: body,
-    }
-  );
+  // Fire-and-forget: dispara para o n8n sem esperar resposta
+  // O n8n pode demorar 2-4 minutos; o app já usa polling no Supabase
+  fetch("https://n8n.srv1291896.hstgr.cloud/webhook/rag-tcu", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body,
+  }).catch(() => {}); // ignora erros de rede silenciosamente
 
-  // Return exactly what N8n returns (prevents crushing if n8n throws a raw 500 text error)
-  const responseText = await n8nResponse.text();
-  
-  return new Response(responseText, {
-    status: n8nResponse.status,
-    headers: {
-      "Content-Type": n8nResponse.headers.get("Content-Type") || "text/plain",
-    }
+  // Retorna 202 imediatamente — o app fará polling no Supabase
+  return new Response(JSON.stringify({ status: "processing" }), {
+    status: 202,
+    headers: { "Content-Type": "application/json" },
   });
 };
 
