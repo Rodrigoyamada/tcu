@@ -1,27 +1,32 @@
 -- ============================================================
--- Migração 017 v5: campo citacao com extração de número
---                  do excerto em Jurisprudências Selecionadas
+-- Migração 017 v6
+-- Correções:
+-- 1. Acórdãos sem ementa são excluídos (causa principal de alucinação)
+-- 2. Colegiado NOT extraído do documento pai — usa "TCU" neutro para
+--    evitar atribuição errada de Plenário a decisões de Câmara
+-- 3. Contexto inclui flag "sem_conteudo" para o prompt detectar e não citar
 -- ============================================================
 
 DROP FUNCTION IF EXISTS search_jurisprudencia_rag(text);
 
 CREATE OR REPLACE FUNCTION search_jurisprudencia_rag(query text)
 RETURNS TABLE (
-  id        UUID,
-  numero    TEXT,
-  citacao   TEXT,
-  titulo    TEXT,
-  ementa    TEXT,
-  excerto   TEXT,
-  conteudo  TEXT,
-  orgao     TEXT,
-  data_pub  DATE,
-  relator   TEXT,
-  tipo      TEXT,
-  area      TEXT,
-  tema      TEXT,
-  snippet   TEXT,
-  rank      FLOAT8
+  id          UUID,
+  numero      TEXT,
+  citacao     TEXT,
+  titulo      TEXT,
+  ementa      TEXT,
+  excerto     TEXT,
+  conteudo    TEXT,
+  orgao       TEXT,
+  data_pub    DATE,
+  relator     TEXT,
+  tipo        TEXT,
+  area        TEXT,
+  tema        TEXT,
+  snippet     TEXT,
+  tem_conteudo BOOLEAN,
+  rank        FLOAT8
 )
 LANGUAGE plpgsql
 STABLE
@@ -36,22 +41,22 @@ BEGIN
   SELECT
     j.id,
     j.numero,
+
+    -- ─── Campo citacao ────────────────────────────────────────────────────────
     CASE
-      -- Acórdão: extrai XXXX/AAAA do campo titulo
-      -- Ex: "ACÓRDÃO 815/2003 ATA 13/2003 - PRIMEIRA CÂMARA" → "Acórdão 815/2003 – Primeira Câmara (TCU)"
+      -- Acórdão: extrai XXXX/AAAA do titulo
       WHEN j.tipo = 'acordao' AND j.titulo IS NOT NULL THEN
         'Acórdão ' ||
         COALESCE((regexp_match(j.titulo, '(\d{1,5}/\d{4})'))[1], 'n/n') ||
-        ' – ' || j.orgao || ' (TCU)'
+        ' (TCU, ' || j.orgao || ')'
 
-      -- Súmula: extrai número do final do campo numero
-      -- Ex: "SUMULA-000294" → "Súmula TCU nº 294"
+      -- Súmula: extrai número do campo numero
       WHEN j.tipo = 'sumula' THEN
         'Súmula TCU nº ' ||
         COALESCE((regexp_match(j.numero, '(\d+)$'))[1]::integer::text, j.numero)
 
-      -- Jurisprudência Selecionada: extrai número do acórdão base no excerto ou ementa
-      -- Lida com ponto de milhar: "2.033/2017" → "2033/2017"
+      -- Jurisprudência Selecionada: extrai o nº do acórdão citado no excerto/ementa
+      -- Usa "TCU" neutro como colegiado para não atribuir colegiado errado
       WHEN j.tipo = 'jurisprudencia_selecionada' THEN
         CASE
           WHEN (regexp_match(
@@ -66,7 +71,7 @@ BEGIN
               )[1],
               '\.', '', 'g'
             ) ||
-            ' – ' || j.orgao || ' (TCU)'
+            ' (TCU) [Jurisprudência Selecionada – verifique colegiado no portal]'
           ELSE
             'Jurisprudência Selecionada – TCU, ' || j.orgao ||
             COALESCE(' (' || extract(year from j.data_pub)::text || ')', '')
@@ -78,9 +83,19 @@ BEGIN
 
       WHEN j.tipo = 'consulta' THEN
         CASE
-          WHEN (regexp_match(coalesce(j.excerto,'') || coalesce(j.ementa,''), 'c[oó]rd[aã]o\s+(\d{1,5}/\d{4})'))[1] IS NOT NULL THEN
-            'Acórdão ' || (regexp_match(j.excerto || j.ementa, 'c[oó]rd[aã]o\s+(\d{1,5}/\d{4})'))[1] ||
-            ' – ' || j.orgao || ' (TCU) [via Resposta a Consulta]'
+          WHEN (regexp_match(
+            coalesce(j.excerto,'') || coalesce(j.ementa,''),
+            '[Aa]c[oó]rd[aã]o\s+([\d\.]{1,7}/\d{4})')
+          )[1] IS NOT NULL THEN
+            'Acórdão ' ||
+            regexp_replace(
+              (regexp_match(
+                coalesce(j.excerto,'') || coalesce(j.ementa,''),
+                '[Aa]c[oó]rd[aã]o\s+([\d\.]{1,7}/\d{4})')
+              )[1],
+              '\.', '', 'g'
+            ) ||
+            ' (TCU) [via Resposta a Consulta – verifique colegiado no portal]'
           ELSE
             'Resposta a Consulta – TCU, ' || j.orgao ||
             COALESCE(' (' || extract(year from j.data_pub)::text || ')', '')
@@ -101,6 +116,7 @@ BEGIN
     j.tipo::TEXT,
     j.area,
     j.tema,
+
     ts_headline(
       'portuguese',
       coalesce(j.titulo,  '') || ' ' ||
@@ -110,6 +126,11 @@ BEGIN
       ts_q,
       'MaxWords=100, MinWords=60, ShortWord=3, MaxFragments=2, FragmentDelimiter=" [...] "'
     ) AS snippet,
+
+    -- Flag que indica se o documento tem conteúdo real (usado pelo prompt para evitar alucinação)
+    (length(coalesce(j.ementa,'')) + length(coalesce(j.excerto,'')) + length(coalesce(j.conteudo,''))) > 80
+      AS tem_conteudo,
+
     ts_rank_cd(
       setweight(to_tsvector('portuguese', coalesce(j.titulo,    '')), 'A') ||
       setweight(to_tsvector('portuguese', coalesce(j.ementa,    '')), 'A') ||
@@ -119,10 +140,14 @@ BEGIN
       setweight(to_tsvector('portuguese', coalesce(j.numero,    '')), 'D'),
       ts_q
     ) * CASE
-        WHEN j.tipo = 'sumula' THEN 3.0
+        WHEN j.tipo = 'sumula'                    THEN 3.0
         WHEN j.tipo = 'jurisprudencia_selecionada' THEN 1.5
+        -- Penaliza acórdãos sem ementa para evitar alucinação de conteúdo
+        WHEN j.tipo = 'acordao'
+          AND length(coalesce(j.ementa,'')) < 50   THEN 0.3
         ELSE 1.0
       END AS rank
+
   FROM jurisprudencia j
   WHERE (
     setweight(to_tsvector('portuguese', coalesce(j.titulo,    '')), 'A') ||
