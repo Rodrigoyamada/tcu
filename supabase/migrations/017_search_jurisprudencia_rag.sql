@@ -1,5 +1,7 @@
 -- ============================================================
--- Migração 017 v6 (otimizada anti-timeout)
+-- Migração 017 v7
+-- - Extração do número da citação também via campo titulo
+-- - Jurisprudência Selecionada e Resposta a Consulta com número real
 -- - ts_headline limitada a 2000 chars por campo
 -- - tem_conteudo como campo calculado
 -- - Penalização de acórdãos sem ementa
@@ -44,38 +46,49 @@ AS $$
         COALESCE((regexp_match(j.numero, '(\d+)$'))[1]::integer::text, j.numero)
 
       WHEN j.tipo = 'jurisprudencia_selecionada' THEN
+        -- Busca número: primeiro no titulo (ex: "Acordao 1604/2015 - Plenario"),
+        -- depois no excerto e ementa
         CASE
           WHEN (regexp_match(
-            left(coalesce(j.excerto,''),3000) || coalesce(j.ementa,''),
-            '[Aa]c[oó]rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1] IS NOT NULL
+            coalesce(j.titulo,'') || ' ' ||
+            left(coalesce(j.excerto,''),2000) || ' ' ||
+            coalesce(j.ementa,''),
+            '[Aa]c[oó]?rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1] IS NOT NULL
           THEN
             'Acórdão ' ||
             regexp_replace(
               (regexp_match(
-                left(coalesce(j.excerto,''),3000) || coalesce(j.ementa,''),
-                '[Aa]c[oó]rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1],
+                coalesce(j.titulo,'') || ' ' ||
+                left(coalesce(j.excerto,''),2000) || ' ' ||
+                coalesce(j.ementa,''),
+                '[Aa]c[oó]?rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1],
               '\.', '', 'g') ||
-            ' (TCU) [Jurisprudência Selecionada – verifique colegiado no portal]'
+            ' (TCU, ' || COALESCE(j.orgao, 'Plenário') || ') [Jurisprudência Selecionada]'
           ELSE
-            'Jurisprudência Selecionada – TCU, ' || j.orgao ||
+            'Jurisprudência Selecionada – TCU, ' || COALESCE(j.orgao,'') ||
             COALESCE(' (' || extract(year from j.data_pub)::text || ')', '')
         END
 
       WHEN j.tipo = 'consulta' THEN
+        -- Busca número: primeiro no titulo, depois no excerto e ementa
         CASE
           WHEN (regexp_match(
-            left(coalesce(j.excerto,''),3000) || coalesce(j.ementa,''),
-            '[Aa]c[oó]rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1] IS NOT NULL
+            coalesce(j.titulo,'') || ' ' ||
+            left(coalesce(j.excerto,''),2000) || ' ' ||
+            coalesce(j.ementa,''),
+            '[Aa]c[oó]?rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1] IS NOT NULL
           THEN
             'Acórdão ' ||
             regexp_replace(
               (regexp_match(
-                left(coalesce(j.excerto,''),3000) || coalesce(j.ementa,''),
-                '[Aa]c[oó]rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1],
+                coalesce(j.titulo,'') || ' ' ||
+                left(coalesce(j.excerto,''),2000) || ' ' ||
+                coalesce(j.ementa,''),
+                '[Aa]c[oó]?rd[aã]o\s+([\d\.]{1,7}/\d{4})'))[1],
               '\.', '', 'g') ||
-            ' (TCU) [via Resposta a Consulta – verifique colegiado no portal]'
+            ' (TCU, ' || COALESCE(j.orgao, 'Plenário') || ') [Resposta a Consulta]'
           ELSE
-            'Resposta a Consulta – TCU, ' || j.orgao ||
+            'Resposta a Consulta – TCU, ' || COALESCE(j.orgao,'') ||
             COALESCE(' (' || extract(year from j.data_pub)::text || ')', '')
         END
 
