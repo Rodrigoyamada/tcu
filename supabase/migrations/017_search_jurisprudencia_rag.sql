@@ -1,9 +1,9 @@
 -- ============================================================
--- Migração 017 v9 — Extrai número da tag XML <acordao_decisao_tcu>
--- - JS/Consulta: numero/ano/colegiado da tag proprietária TCU
+-- Migração 017 v10 — Tag XML em excerto E ementa
+-- - JS/Consulta: busca <acordao_decisao_tcu> em excerto+ementa
+-- - Cobre ~55% de consultas onde a tag está na ementa
 -- - Súmula: titulo é o número direto
 -- - Boletins: número do titulo
--- - Filtro temporal anti-anacronismo
 -- ============================================================
 -- - Súmula: usa campo titulo diretamente (ex: "292")
 -- - JS/Consulta: busca número só em excerto+ementa (titulo é NULL)
@@ -56,27 +56,31 @@ AS $$
           j.numero
         )
 
-      -- JS: extrai numero/ano/colegiado da tag XML <acordao_decisao_tcu ...>
+      -- JS: tag XML em excerto OU ementa
       WHEN j.tipo = 'jurisprudencia_selecionada' THEN
         CASE
-          -- 1º tenta: tag XML propriétária do TCU com atributos numero e ano
-          WHEN (regexp_match(coalesce(j.excerto,''),
+          -- 1º: tag XML proprietária do TCU (excerto + ementa)
+          WHEN (regexp_match(
+            coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
             '<acordao_decisao_tcu[^>]*numero="(\d{1,5})"[^>]*ano="(\d{4})"'))[1] IS NOT NULL
           THEN
             'Acórdão ' ||
-            (regexp_match(coalesce(j.excerto,''),
+            (regexp_match(
+              coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
               '<acordao_decisao_tcu[^>]*numero="(\d{1,5})"[^>]*ano="(\d{4})"'))[1]
             || '/' ||
-            (regexp_match(coalesce(j.excerto,''),
+            (regexp_match(
+              coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
               '<acordao_decisao_tcu[^>]*numero="(\d{1,5})"[^>]*ano="(\d{4})"'))[2]
             || ' (TCU, ' ||
             COALESCE(
-              (regexp_match(coalesce(j.excerto,''),
+              (regexp_match(
+                coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
                 '<acordao_decisao_tcu[^>]*colegiado="([^"]+)"'))[1],
               j.orgao, 'Plenário'
             ) || ') [Jurisprudência Selecionada]'
 
-          -- 2º tenta: texto livre "Acórdão NNNN/YYYY"
+          -- 2º: texto livre "Acórdão NNNN/YYYY" no excerto ou ementa
           WHEN (regexp_match(
             left(coalesce(j.excerto,''),3000) || ' ' || coalesce(j.ementa,''),
             '[Aa]c[oó]?rd[aã]o\s+(\d{1,5}/\d{4})'))[1] IS NOT NULL
@@ -87,27 +91,30 @@ AS $$
               '[Aa]c[oó]?rd[aã]o\s+(\d{1,5}/\d{4})'))[1]
             || ' (TCU, ' || COALESCE(j.orgao,'Plenário') || ') [Jurisprudência Selecionada]'
 
-          -- fallback: sem número disponível
           ELSE
             'Jurisprudência Selecionada – TCU, ' || COALESCE(j.orgao,'') ||
             COALESCE(' (' || extract(year from j.data_pub)::text || ')', '')
         END
 
-      -- Consulta: mesma lógica da JS
+      -- Consulta: mesma lógica — tag em excerto OU ementa
       WHEN j.tipo = 'consulta' THEN
         CASE
-          WHEN (regexp_match(coalesce(j.excerto,''),
+          WHEN (regexp_match(
+            coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
             '<acordao_decisao_tcu[^>]*numero="(\d{1,5})"[^>]*ano="(\d{4})"'))[1] IS NOT NULL
           THEN
             'Acórdão ' ||
-            (regexp_match(coalesce(j.excerto,''),
+            (regexp_match(
+              coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
               '<acordao_decisao_tcu[^>]*numero="(\d{1,5})"[^>]*ano="(\d{4})"'))[1]
             || '/' ||
-            (regexp_match(coalesce(j.excerto,''),
+            (regexp_match(
+              coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
               '<acordao_decisao_tcu[^>]*numero="(\d{1,5})"[^>]*ano="(\d{4})"'))[2]
             || ' (TCU, ' ||
             COALESCE(
-              (regexp_match(coalesce(j.excerto,''),
+              (regexp_match(
+                coalesce(j.excerto,'') || ' ' || coalesce(j.ementa,''),
                 '<acordao_decisao_tcu[^>]*colegiado="([^"]+)"'))[1],
               j.orgao, 'Plenário'
             ) || ') [Resposta a Consulta]'
