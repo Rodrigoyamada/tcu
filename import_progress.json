@@ -1,0 +1,197 @@
+{
+  "sumula.csv": {
+    "status": "done",
+    "total": 294,
+    "ts": "2026-04-18T13:00:49.827569+00:00"
+  },
+  "boletim-pessoal.csv": {
+    "status": "done",
+    "total": 1500,
+    "ts": "2026-04-18T13:01:00.164232+00:00"
+  },
+  "resposta-consulta.csv": {
+    "status": "done",
+    "total": 523,
+    "ts": "2026-04-18T13:01:14.193261+00:00"
+  },
+  "boletim-jurisprudencia.csv": {
+    "status": "done",
+    "total": 5847,
+    "ts": "2026-04-18T13:01:55.153470+00:00"
+  },
+  "boletim-informativo-lc.csv": {
+    "status": "done",
+    "total": 1978,
+    "ts": "2026-04-18T13:02:07.555585+00:00"
+  },
+  "jurisprudencia-selecionada.csv": {
+    "status": "done",
+    "total": 17563,
+    "ts": "2026-04-18T13:08:04.533853+00:00"
+  },
+  "acordao-completo-1992.csv": {
+    "status": "done",
+    "total": 2370,
+    "ts": "2026-04-18T13:08:41.166355+00:00"
+  },
+  "acordao-completo-1993.csv": {
+    "status": "done",
+    "total": 2224,
+    "ts": "2026-04-18T13:09:35.847530+00:00"
+  },
+  "acordao-completo-1994.csv": {
+    "status": "done",
+    "total": 3114,
+    "ts": "2026-04-18T13:10:55.794922+00:00"
+  },
+  "acordao-completo-1995.csv": {
+    "status": "done",
+    "total": 2251,
+    "ts": "2026-04-18T13:13:52.528181+00:00"
+  },
+  "acordao-completo-1996.csv": {
+    "status": "done",
+    "total": 3094,
+    "ts": "2026-04-18T13:15:27.600987+00:00"
+  },
+  "acordao-completo-1997.csv": {
+    "status": "done",
+    "total": 3241,
+    "ts": "2026-04-18T13:17:04.506081+00:00"
+  },
+  "acordao-completo-1998.csv": {
+    "status": "done",
+    "total": 2783,
+    "ts": "2026-04-18T13:18:49.861218+00:00"
+  },
+  "acordao-completo-1999.csv": {
+    "status": "done",
+    "total": 3899,
+    "ts": "2026-04-18T13:20:41.536398+00:00"
+  },
+  "acordao-completo-2000.csv": {
+    "status": "done",
+    "total": 4766,
+    "ts": "2026-04-18T13:24:24.486166+00:00"
+  },
+  "acordao-completo-2001.csv": {
+    "status": "done",
+    "total": 4649,
+    "ts": "2026-04-18T13:27:46.319435+00:00"
+  },
+  "acordao-completo-2002.csv": {
+    "status": "done",
+    "total": 5911,
+    "ts": "2026-04-18T13:32:04.062031+00:00"
+  },
+  "acordao-completo-2003.csv": {
+    "status": "done",
+    "total": 7469,
+    "ts": "2026-04-18T13:37:48.332438+00:00"
+  },
+  "acordao-completo-2004.csv": {
+    "status": "done",
+    "total": 7976,
+    "ts": "2026-04-18T13:45:54.093051+00:00"
+  },
+  "acordao-completo-2005.csv": {
+    "status": "done",
+    "total": 8083,
+    "ts": "2026-04-18T13:54:33.497699+00:00"
+  },
+  "acordao-completo-2006.csv": {
+    "status": "done",
+    "total": 9577,
+    "ts": "2026-04-18T14:05:17.083762+00:00"
+  },
+  "acordao-completo-2007.csv": {
+    "status": "done",
+    "total": 10205,
+    "ts": "2026-04-18T14:17:47.248666+00:00"
+  },
+  "acordao-completo-2008.csv": {
+    "status": "done",
+    "total": 14140,
+    "ts": "2026-04-18T14:32:38.062963+00:00"
+  },
+  "acordao-completo-2009.csv": {
+    "status": "done",
+    "total": 17180,
+    "ts": "2026-04-18T14:53:19.297110+00:00"
+  },
+  "acordao-completo-2010.csv": {
+    "status": "done",
+    "total": 19363,
+    "ts": "2026-04-18T15:23:06.400405+00:00"
+  },
+  "acordao-completo-2012.csv": {
+    "status": "done",
+    "total": 20548,
+    "ts": "2026-04-18T17:22:11.085155+00:00"
+  },
+  "acordao-completo-2013.csv": {
+    "status": "done",
+    "total": 19922,
+    "ts": "2026-04-18T17:26:22.866336+00:00"
+  },
+  "acordao-completo-2014.csv": {
+    "status": "done",
+    "total": 19698,
+    "ts": "2026-04-18T17:30:48.368003+00:00"
+  },
+  "acordao-completo-2015.csv": {
+    "status": "done",
+    "total": 22448,
+    "ts": "2026-04-18T17:35:42.231146+00:00"
+  },
+  "acordao-completo-2018.csv": {
+    "status": "done",
+    "total": 30989,
+    "ts": "2026-04-18T17:42:31.115969+00:00"
+  },
+  "acordao-completo-2019.csv": {
+    "status": "done",
+    "total": 31074,
+    "ts": "2026-04-18T17:49:16.147290+00:00"
+  },
+  "acordao-completo-2020.csv": {
+    "status": "done",
+    "total": 14584,
+    "ts": "2026-04-18T18:53:18.589873+00:00"
+  },
+  "acordao-completo-2021.csv": {
+    "status": "done",
+    "total": 41432,
+    "ts": "2026-04-18T19:03:52.803727+00:00"
+  },
+  "acordao-completo-2022.csv": {
+    "status": "done",
+    "total": 22494,
+    "ts": "2026-04-18T19:10:21.427991+00:00"
+  },
+  "acordao-completo-2023.csv": {
+    "status": "done",
+    "total": 28520,
+    "ts": "2026-04-18T19:17:52.306056+00:00"
+  },
+  "acordao-completo-2024.csv": {
+    "status": "done",
+    "total": 21661,
+    "ts": "2026-04-18T19:24:39.830056+00:00"
+  },
+  "acordao-completo-2025.csv": {
+    "status": "done",
+    "total": 18588,
+    "ts": "2026-04-18T19:31:00.112726+00:00"
+  },
+  "acordao-completo-2026.csv": {
+    "status": "done",
+    "total": 4200,
+    "ts": "2026-04-18T19:32:39.675112+00:00"
+  },
+  "acordao-completo-2011.csv": {
+    "status": "done",
+    "total": 25669,
+    "ts": "2026-04-18T20:25:01.792864+00:00"
+  }
+}
