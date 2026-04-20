@@ -407,7 +407,21 @@ export default function AreaPrincipalPage() {
                         </p>
                     </div>
 
-                    {/* Conteúdo principal: parecer renderizado ou textarea de input */}
+                    {/* Processing spinner — acima da caixa de texto */}
+                    {processingAI && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-4 flex items-center gap-3">
+                            <div className="w-5 h-5 border-2 border-[#2E75B6] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-[#1F4E79]">Agente de IA processando…</p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Buscando jurisprudência e elaborando o parecer. Isso pode levar alguns segundos.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Conteúdo principal */}
+
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                         <label className="block text-sm font-semibold text-[#1F4E79] mb-3">
                             {previewMode ? 'Parecer Gerado' : 'Descreva seu problema'}
@@ -500,18 +514,6 @@ export default function AreaPrincipalPage() {
                         </button>
                     </div>
 
-                    {/* Processing spinner */}
-                    {processingAI && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-4 flex items-center gap-3">
-                            <div className="w-5 h-5 border-2 border-[#2E75B6] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                            <div>
-                                <p className="text-sm font-medium text-[#1F4E79]">Agente de IA processando…</p>
-                                <p className="text-xs text-slate-500 mt-0.5">
-                                    Buscando jurisprudência e elaborando o parecer. Isso pode levar alguns segundos.
-                                </p>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
