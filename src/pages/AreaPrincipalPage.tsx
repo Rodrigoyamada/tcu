@@ -476,40 +476,42 @@ export default function AreaPrincipalPage() {
 
                     {/* Buttons */}
                     <div className="flex flex-wrap items-center gap-3">
-                        {!isReadOnly && (
-                            <>
-                                <button
-                                    id="btn-processar-ia"
-                                    onClick={handleProcessAI}
-                                    disabled={processingAI || !problema.trim()}
-                                    className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#1F4E79] to-[#2E75B6] text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:from-[#1a4368] hover:to-[#2563a0] disabled:opacity-60 disabled:cursor-not-allowed"
-                                >
-                                    {processingAI ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            Processando com IA…
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles className="w-4 h-4" />
-                                            Processar com IA
-                                        </>
-                                    )}
-                                </button>
+                        {/* Processar com IA — some permanentemente após o processamento */}
+                        {!isReadOnly && !previewMode && (
+                            <button
+                                id="btn-processar-ia"
+                                onClick={handleProcessAI}
+                                disabled={processingAI || !problema.trim()}
+                                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#1F4E79] to-[#2E75B6] text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:from-[#1a4368] hover:to-[#2563a0] disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {processingAI ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Processando com IA…
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4" />
+                                        Processar com IA
+                                    </>
+                                )}
+                            </button>
+                        )}
 
-                                <button
-                                    id="btn-salvar"
-                                    onClick={handleSave}
-                                    disabled={saving || processingAI}
-                                    className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                                >
-                                    {saving ? (
-                                        <><Loader2 className="w-4 h-4 animate-spin text-[#2E75B6]" /> Salvando…</>
-                                    ) : (
-                                        <><Save className="w-4 h-4" /> Salvar Parecer</>
-                                    )}
-                                </button>
-                            </>
+                        {/* Salvar — sempre visível para o dono */}
+                        {!isReadOnly && (
+                            <button
+                                id="btn-salvar"
+                                onClick={handleSave}
+                                disabled={saving || processingAI}
+                                className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {saving ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin text-[#2E75B6]" /> Salvando…</>
+                                ) : (
+                                    <><Save className="w-4 h-4" /> Salvar Parecer</>
+                                )}
+                            </button>
                         )}
 
                         <button
