@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Sparkles, Save, Loader2, Scale, AlertCircle, CheckCircle2, FileDown, FileText, ArrowLeft } from 'lucide-react'
+import { Sparkles, Loader2, Scale, AlertCircle, FileDown, FileText, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { Parecer } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -24,8 +24,6 @@ export default function AreaPrincipalPage() {
     const [problema, setProblema] = useState('')
     const [loadingParecer, setLoadingParecer] = useState(true)
     const [processingAI, setProcessingAI] = useState(false)
-    const [saving, setSaving] = useState(false)
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
     const [aiError, setAiError] = useState('')
     const [previewMode, setPreviewMode] = useState(false)
 
@@ -341,24 +339,7 @@ export default function AreaPrincipalPage() {
         URL.revokeObjectURL(url)
     }
 
-    // ── Salva no Supabase ────────────────────────────────────────────────────
-
-    const handleSave = useCallback(async () => {
-        if (!id) return
-        setSaving(true)
-        setSaveStatus('idle')
-        const { error } = await supabase
-            .from('pareceres')
-            .update({ content: problema })
-            .eq('id', id)
-        setSaving(false)
-        if (error) {
-            setSaveStatus('error')
-        } else {
-            setSaveStatus('success')
-            setTimeout(() => setSaveStatus('idle'), 3000)
-        }
-    }, [id, problema])
+    // Salvar removido — o N8n escreve diretamente no banco durante o processamento
 
     // ── Loading / Not found ──────────────────────────────────────────────────
 
@@ -498,22 +479,6 @@ export default function AreaPrincipalPage() {
                             </button>
                         )}
 
-                        {/* Salvar — sempre visível para o dono */}
-                        {!isReadOnly && (
-                            <button
-                                id="btn-salvar"
-                                onClick={handleSave}
-                                disabled={saving || processingAI}
-                                className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                                {saving ? (
-                                    <><Loader2 className="w-4 h-4 animate-spin text-[#2E75B6]" /> Salvando…</>
-                                ) : (
-                                    <><Save className="w-4 h-4" /> Salvar Parecer</>
-                                )}
-                            </button>
-                        )}
-
                         <button
                             id="btn-exportar-pdf"
                             onClick={handleExportPDF}
@@ -533,17 +498,6 @@ export default function AreaPrincipalPage() {
                         >
                             <FileText className="w-4 h-4" /> Exportar Word
                         </button>
-
-                        {saveStatus === 'success' && (
-                            <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
-                                <CheckCircle2 className="w-4 h-4" /> Salvo com sucesso!
-                            </div>
-                        )}
-                        {saveStatus === 'error' && (
-                            <div className="flex items-center gap-1.5 text-red-500 text-sm font-medium">
-                                <AlertCircle className="w-4 h-4" /> Erro ao salvar.
-                            </div>
-                        )}
                     </div>
 
                     {/* Processing spinner */}
