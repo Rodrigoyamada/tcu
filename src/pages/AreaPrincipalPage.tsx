@@ -414,7 +414,7 @@ export default function AreaPrincipalPage() {
                             <div>
                                 <p className="text-sm font-medium text-[#1F4E79]">Agente de IA processando…</p>
                                 <p className="text-xs text-slate-500 mt-0.5">
-                                    Buscando jurisprudência e elaborando o parecer. Isso pode levar alguns segundos.
+                                    Buscando jurisprudência e elaborando o parecer. Isso pode levar um par de minutos.
                                 </p>
                             </div>
                         </div>
