@@ -14,7 +14,6 @@ interface GroupStats {
     mes: number
     semana: number
     hoje: number
-    sparkline: number[]
 }
 
 interface RecentUser {
@@ -73,24 +72,7 @@ async function countQuery(table: string, gte?: string): Promise<number> {
     return count || 0
 }
 
-function Sparkline({ data, color }: { data: number[], color: string }) {
-    if (!data.length) return null
-    const max = Math.max(...data, 1)
-    const points = data.map((v, i) => `${(i / (data.length - 1)) * 100},${100 - (v / max) * 80}`).join(' ')
-    
-    return (
-        <svg viewBox="0 0 100 100" className="w-16 h-8 absolute right-3 bottom-3 opacity-20" preserveAspectRatio="none">
-            <polyline
-                fill="none"
-                stroke={color}
-                strokeWidth="10"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={points}
-            />
-        </svg>
-    )
-}
+
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -102,10 +84,9 @@ interface StatCardProps {
     iconColor: string
     loading: boolean
     suffix?: string
-    sparkline?: number[]
 }
 
-function StatCard({ label, value, icon, accent, iconColor, loading, suffix, sparkline }: StatCardProps) {
+function StatCard({ label, value, icon, accent, iconColor, loading, suffix }: StatCardProps) {
     return (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-3 relative overflow-hidden group hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
@@ -122,7 +103,6 @@ function StatCard({ label, value, icon, accent, iconColor, loading, suffix, spar
                     {suffix && <span className="text-base font-normal text-slate-400 ml-1">{suffix}</span>}
                 </p>
             )}
-            {!loading && sparkline && <Sparkline data={sparkline} color="currentColor" />}
         </div>
     )
 }
@@ -168,7 +148,6 @@ function StatsSection({ title, subtitle, icon, stats, loading, cards }: SectionP
                         iconColor={c.iconColor}
                         loading={loading}
                         suffix={c.suffix}
-                        sparkline={stats?.sparkline}
                     />
                 ))}
             </div>
@@ -215,10 +194,7 @@ export default function AdminDashboardPage() {
                 countQuery('pareceres', sod),
                 supabase.from('app_users').select('id, name, email, created_at, role').order('created_at', { ascending: false }).limit(5),
                 supabase.from('pareceres').select('id, title, user_id, created_at, content').order('created_at', { ascending: false }).limit(5),
-                supabase.rpc('count_jurisprudencia_by_type'),
-                // Busca tendência real nos últimos 7 dias
-                Promise.all(last7Days.map(day => countQuery('app_users', day))),
-                Promise.all(last7Days.map(day => countQuery('pareceres', day)))
+                supabase.rpc('count_jurisprudencia_by_type')
             ])
 
             // Fallback se RPC falhar (muito comum em migrations não aplicadas)
@@ -232,18 +208,9 @@ export default function AdminDashboardPage() {
                     }, {})
                     dbSummary = Object.entries(counts).map(([tipo, count]) => ({ tipo, count: count as number }))
                 }
-            } else {
-                dbSummary = categoriesRaw.data as CategoryStat[]
-            }
-
-            // Normaliza as tendências para serem relativas ao dia anterior (crescimento diário)
-            const getDailyGrowth = (trend: number[]) => {
-                return trend.map((v, i) => i === 0 ? v : v - trend[i-1])
-            }
-
             setStats({
-                usuarios:  { total: uTotal, mes: uMes, semana: uSemana, hoje: uHoje, sparkline: getDailyGrowth(uTrend) },
-                pareceres: { total: pTotal, mes: pMes, semana: pSemana, hoje: pHoje, sparkline: getDailyGrowth(pTrend) },
+                usuarios:  { total: uTotal, mes: uMes, semana: uSemana, hoje: uHoje },
+                pareceres: { total: pTotal, mes: pMes, semana: pSemana, hoje: pHoje },
                 recentUsers: (recentUsers.data || []) as RecentUser[],
                 recentPareceres: (recentPareceres.data || []) as RecentParecer[],
                 databaseSummary: dbSummary.sort((a, b) => b.count - a.count)
