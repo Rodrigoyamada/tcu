@@ -7,7 +7,6 @@ import {
     UploadCloud,
     Users,
     LogOut,
-    LogOut,
     Bell,
     BarChart2,
     Coins,
