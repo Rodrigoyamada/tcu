@@ -7,8 +7,10 @@ import {
     UploadCloud,
     Users,
     LogOut,
+    LogOut,
     Bell,
     BarChart2,
+    Coins,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -21,7 +23,7 @@ const navItems = [
 ]
 
 const accountItems = [
-    { to: '/dashboard/creditos', label: 'Meus Créditos', icon: () => <span className="w-4.5 h-4.5 flex-shrink-0 text-amber-400 text-lg leading-none text-center">🪙</span>, end: false },
+    { to: '/dashboard/creditos', label: 'Meus Créditos', icon: () => <Coins className="w-4.5 h-4.5 flex-shrink-0 text-[#FFD700] fill-amber-500/30" />, end: false },
 ]
 
 const adminItems = [
@@ -122,7 +124,7 @@ export default function AppLayout() {
                         title="Meus Créditos"
                         className={({ isActive }) => `flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-full transition-all duration-150 border ${isActive ? 'bg-[#2E75B6] border-[#2E75B6] text-white shadow-sm' : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white'}`}
                     >
-                        <span className="text-amber-400 text-sm">🪙</span>
+                        <Coins className="w-4 h-4 text-[#FFD700] fill-amber-500/20" />
                         <span className="text-sm font-bold">{user?.credits_balance?.toLocaleString('pt-BR') || 0}</span>
                         <span className="text-[11px] font-medium pl-0.5 opacity-80 hidden sm:inline uppercase tracking-wider">Créditos</span>
                     </NavLink>
