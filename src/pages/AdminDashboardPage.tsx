@@ -173,7 +173,8 @@ export default function AdminDashboardPage() {
                 uTotal, uMes, uSemana, uHoje,
                 pTotal, pMes, pSemana, pHoje,
                 recentUsers, recentPareceres,
-                categoriesRaw
+                categoriesRaw,
+                legislacaoTotal
             ] = await Promise.all([
                 countQuery('app_users'),
                 countQuery('app_users', som),
@@ -185,7 +186,8 @@ export default function AdminDashboardPage() {
                 countQuery('pareceres', sod),
                 supabase.from('app_users').select('id, name, email, created_at, role').order('created_at', { ascending: false }).limit(5),
                 supabase.from('pareceres').select('id, title, user_id, created_at, content').order('created_at', { ascending: false }).limit(5),
-                supabase.rpc('count_jurisprudencia_by_type')
+                supabase.rpc('count_jurisprudencia_by_type'),
+                countQuery('legislacao')
             ])
 
             // Fallback se RPC falhar (muito comum em migrations não aplicadas)
@@ -199,7 +201,13 @@ export default function AdminDashboardPage() {
                     }, {})
                     dbSummary = Object.entries(counts).map(([tipo, count]) => ({ tipo, count: count as number }))
                 }
-            } // <- FECHAMENTO DO IF (categoriesRaw.error) AQUI
+            } else if (categoriesRaw.data) {
+                dbSummary = categoriesRaw.data as CategoryStat[]
+            }
+
+            if (legislacaoTotal > 0) {
+                dbSummary.push({ tipo: 'legislação_federal_rg', count: legislacaoTotal })
+            }
 
             setStats({
                 usuarios:  { total: uTotal, mes: uMes, semana: uSemana, hoje: uHoje },
