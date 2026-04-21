@@ -6,7 +6,7 @@ import type { Parecer } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 // Proxy Vite em dev → N8n produção
-const N8N_WEBHOOK = '/api/n8n/webhook/rag-tcu'
+const N8N_WEBHOOK = '/api/n8n/webhook/rag-tcu-v2'
 
 const PLACEHOLDER = `Descreva seu problema jurídico com o máximo de detalhes possível...
 
