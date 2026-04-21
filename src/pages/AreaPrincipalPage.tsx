@@ -18,7 +18,7 @@ Exemplos:
 export default function AreaPrincipalPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { user } = useAuth()
+    const { user, updateProfile } = useAuth()
 
     const [parecer, setParecer] = useState<Parecer | null>(null)
     const [problema, setProblema] = useState('')
@@ -123,6 +123,17 @@ export default function AreaPrincipalPage() {
 
             setProblema(resultText)
             setPreviewMode(true)
+
+            // Recarrega o saldo final de créditos para atualizar o medidor na barra superior automaticamente!
+            const { data: updatedUser } = await supabase
+                .from('app_users')
+                .select('credits_balance')
+                .eq('id', user.id)
+                .single()
+                
+            if (updatedUser) {
+                updateProfile({ credits_balance: updatedUser.credits_balance })
+            }
 
         } catch (err: unknown) {
             setAiError(
