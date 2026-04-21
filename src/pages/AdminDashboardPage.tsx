@@ -169,20 +169,11 @@ export default function AdminDashboardPage() {
             const sow = startOfWeek()
             const sod = startOfDay()
 
-            // 1. Calcular datas dos últimos 7 dias para as tendências
-            const last7Days = Array.from({ length: 7 }, (_, i) => {
-                const d = new Date()
-                d.setDate(d.getDate() - i)
-                d.setHours(0, 0, 0, 0)
-                return d.toISOString()
-            }).reverse()
-
             const [
                 uTotal, uMes, uSemana, uHoje,
                 pTotal, pMes, pSemana, pHoje,
                 recentUsers, recentPareceres,
-                categoriesRaw,
-                uTrend, pTrend
+                categoriesRaw
             ] = await Promise.all([
                 countQuery('app_users'),
                 countQuery('app_users', som),
