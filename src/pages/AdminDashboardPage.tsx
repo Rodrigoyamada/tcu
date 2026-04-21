@@ -208,6 +208,8 @@ export default function AdminDashboardPage() {
                     }, {})
                     dbSummary = Object.entries(counts).map(([tipo, count]) => ({ tipo, count: count as number }))
                 }
+            } // <- FECHAMENTO DO IF (categoriesRaw.error) AQUI
+
             setStats({
                 usuarios:  { total: uTotal, mes: uMes, semana: uSemana, hoje: uHoje },
                 pareceres: { total: pTotal, mes: pMes, semana: pSemana, hoje: pHoje },
