@@ -20,6 +20,10 @@ const navItems = [
     { to: '/dashboard/novo-parecer', label: 'Novo Parecer', icon: FilePlus, end: false },
 ]
 
+const accountItems = [
+    { to: '/dashboard/creditos', label: 'Meus Créditos', icon: () => <span className="w-4.5 h-4.5 flex-shrink-0 text-amber-400 text-lg leading-none text-center">🪙</span>, end: false },
+]
+
 const adminItems = [
     { to: '/dashboard/admin',    label: 'Painel Admin',        icon: BarChart2,  end: true },
     { to: '/dashboard/importar', label: 'Gerenciar Dados',     icon: UploadCloud, end: false },
@@ -114,6 +118,16 @@ export default function AppLayout() {
                     )}
 
                     <NavLink
+                        to="/dashboard/creditos"
+                        title="Meus Créditos"
+                        className={({ isActive }) => `flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-full transition-all duration-150 border ${isActive ? 'bg-[#2E75B6] border-[#2E75B6] text-white shadow-sm' : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        <span className="text-amber-400 text-sm">🪙</span>
+                        <span className="text-sm font-bold">{user?.credits_balance?.toLocaleString('pt-BR') || 0}</span>
+                        <span className="text-[11px] font-medium pl-0.5 opacity-80 hidden sm:inline uppercase tracking-wider">Créditos</span>
+                    </NavLink>
+
+                    <NavLink
                         to="/dashboard/meu-perfil"
                         title="Meu Perfil"
                         className={({ isActive }) => `flex items-center gap-2.5 p-1.5 pr-3 rounded-xl transition-all duration-150 ${isActive ? 'bg-white/10' : 'hover:bg-white/5'}`}
@@ -156,6 +170,26 @@ export default function AppLayout() {
                                 }
                             >
                                 <Icon className="w-4.5 h-4.5 flex-shrink-0" size={18} />
+                                {label}
+                            </NavLink>
+                        ))}
+
+                        <div className="pt-3 pb-1">
+                            <p className="px-3 text-white/30 text-[10px] uppercase tracking-widest font-semibold">Minha Conta</p>
+                        </div>
+                        {accountItems.map(({ to, label, icon: Icon, end }) => (
+                            <NavLink
+                                key={to}
+                                to={to}
+                                end={end}
+                                className={({ isActive }) =>
+                                    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${isActive
+                                        ? 'bg-amber-500/20 text-amber-100 shadow-sm'
+                                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                    }`
+                                }
+                            >
+                                <Icon />
                                 {label}
                             </NavLink>
                         ))}

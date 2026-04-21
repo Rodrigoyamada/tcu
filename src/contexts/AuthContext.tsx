@@ -3,10 +3,12 @@ import type { ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface User {
+    id?: string
     email: string
     name: string
     initials: string
     role: 'admin' | 'user'
+    credits_balance?: number
 }
 
 interface AuthContextType {
@@ -45,10 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Verifica admin hardcoded
         if (email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
             const adminUser: User = {
+                id: '00000000-0000-0000-0000-000000000000', // Mock Admin ID
                 email: ADMIN_EMAIL,
                 name: ADMIN_NAME,
                 initials: 'RY',
                 role: 'admin',
+                credits_balance: 999999, // Admin infinito
             }
             setUser(adminUser)
             localStorage.setItem('acordeon_user', JSON.stringify(adminUser))
@@ -68,10 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const loggedUser: User = {
+            id: data.id,
             email: data.email,
             name: data.name,
             initials: getInitials(data.name),
             role: data.role as 'admin' | 'user',
+            credits_balance: data.credits_balance || 0,
         }
         setUser(loggedUser)
         localStorage.setItem('acordeon_user', JSON.stringify(loggedUser))

@@ -62,6 +62,19 @@ export default function AreaPrincipalPage() {
         setAiError('')
 
         try {
+            if (!user?.id) throw new Error('Sessão inválida. Faça login novamente.')
+
+            // Verifica créditos ANTES de chamar N8N de forma segura (sem usar o cache do menu)
+            const { data: userDb } = await supabase
+                .from('app_users')
+                .select('credits_balance')
+                .eq('id', user.id)
+                .single()
+
+            if (!userDb || userDb.credits_balance < 15) {
+                throw new Error('Saldo insuficiente! Um parecer profundo consome cerca de 13 Créditos. Você precisará comprar mais Fichas para continuar.')
+            }
+
             // Zera o conteúdo no banco para o polling funcionar corretamente se for a segunda vez
             await supabase
                 .from('pareceres')
@@ -77,6 +90,7 @@ export default function AreaPrincipalPage() {
                     descricao: parecer.description,
                     problema: problema,
                     user: user?.email,
+                    user_id: user?.id,
                     parecer_id: parecer.id,
                 }),
             })

@@ -19,6 +19,7 @@ const NotificacoesPage = lazy(() => import('./pages/NotificacoesPage'))
 const UsuarioDetailPage = lazy(() => import('./pages/UsuarioDetailPage'))
 const MeuPerfilPage = lazy(() => import('./pages/MeuPerfilPage'))
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
+const CreditosPage = lazy(() => import('./pages/CreditosPage'))
 
 // Loading fallback components
 function PageLoader() {
@@ -50,6 +51,7 @@ export default function App() {
                 <Route path="/dashboard/novo-parecer" element={<NovoParecerPage />} />
                 <Route path="/dashboard/parecer/:id" element={<AreaPrincipalPage />} />
                 <Route path="/dashboard/meu-perfil" element={<MeuPerfilPage />} />
+                <Route path="/dashboard/creditos" element={<CreditosPage />} />
 
                 {/* Admin-only */}
                 <Route element={<AdminRoute />}>

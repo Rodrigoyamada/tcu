@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, ShieldAlert, ShieldCheck, Trash2, Users, Loader2, Check, X } from 'lucide-react'
+import { Search, ShieldAlert, ShieldCheck, Trash2, Users, Loader2, Check, X, Coins } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -22,6 +22,12 @@ export default function UsuariosPage() {
     // Confirmações
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
     const [processingId, setProcessingId] = useState<string | null>(null)
+
+    // Modal de Créditos
+    const [creditModalOpen, setCreditModalOpen] = useState(false)
+    const [creditTargetUser, setCreditTargetUser] = useState<AppUser | null>(null)
+    const [creditAmount, setCreditAmount] = useState(100)
+    const [addingCredit, setAddingCredit] = useState(false)
 
     useEffect(() => {
         fetchUsers()
@@ -70,6 +76,30 @@ export default function UsuariosPage() {
         }
         setProcessingId(null)
         setConfirmDeleteId(null)
+    }
+
+    const openCreditModal = (user: AppUser) => {
+        setCreditTargetUser(user)
+        setCreditAmount(100) // reset
+        setCreditModalOpen(true)
+    }
+
+    const handleInjectCredits = async () => {
+        if (!creditTargetUser || !currentUser?.id) return
+        setAddingCredit(true)
+        const { error } = await supabase.rpc('admin_add_credits', {
+            p_target_user_id: creditTargetUser.id,
+            p_credits_amount: creditAmount,
+            p_admin_user_id: currentUser.id
+        })
+
+        if (!error) {
+            setCreditModalOpen(false)
+            alert(`Créditos inseridos com sucesso em ${creditTargetUser.name}!`)
+        } else {
+            alert('Erro ao injetar créditos: ' + error.message)
+        }
+        setAddingCredit(false)
     }
 
     const formatDate = (dateStr: string) => {
@@ -165,6 +195,19 @@ export default function UsuariosPage() {
                                                 <span className="text-xs text-slate-400 italic">Conta Sistema</span>
                                             ) : (
                                                 <div className="flex items-center justify-end gap-2">
+                                                    {/* Injetar Fichas Button */}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openCreditModal(u)
+                                                        }}
+                                                        disabled={processingId === u.id}
+                                                        title="Adicionar Créditos"
+                                                        className="p-1.5 rounded-lg transition-colors text-amber-500 hover:bg-amber-50"
+                                                    >
+                                                        <Coins className="w-4 h-4" />
+                                                    </button>
+
                                                     {/* Toggle Role Button */}
                                                     <button
                                                         onClick={(e) => {
@@ -229,6 +272,48 @@ export default function UsuariosPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Modal de Injeção de Créditos */}
+            {creditModalOpen && creditTargetUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-6" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 mb-4 text-[#1F4E79]">
+                            <Coins className="w-6 h-6 text-amber-500" />
+                            <h2 className="text-xl font-bold">Injetar Créditos</h2>
+                        </div>
+                        
+                        <p className="text-sm text-slate-500 mb-5">
+                            Adicione saldo à carteira do usuário <strong className="text-slate-700">{creditTargetUser.name}</strong> para subsidiar chamadas de Inteligência Artificial.
+                        </p>
+                        
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Quantidade de Créditos</label>
+                        <input 
+                            type="number" 
+                            min="1"
+                            value={creditAmount}
+                            onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-lg mb-6 focus:ring-2 focus:ring-amber-400 focus:outline-none focus:border-amber-400 font-mono text-lg"
+                        />
+
+                        <div className="flex items-center gap-3 justify-end">
+                            <button 
+                                onClick={() => setCreditModalOpen(false)}
+                                disabled={addingCredit}
+                                className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleInjectCredits}
+                                disabled={addingCredit}
+                                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {addingCredit ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
