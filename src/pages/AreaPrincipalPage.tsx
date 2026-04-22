@@ -64,15 +64,20 @@ export default function AreaPrincipalPage() {
         try {
             if (!user?.id) throw new Error('Sessão inválida. Faça login novamente.')
 
-            // Verifica créditos ANTES de chamar N8N de forma segura (sem usar o cache do menu)
-            const { data: userDb } = await supabase
-                .from('app_users')
-                .select('credits_balance')
-                .eq('id', user.id)
-                .single()
+            // O admin hardcoded não existe na tabela app_users, então permitimos acesso ilimitado
+            const isHardcodedAdmin = user?.email?.toLowerCase() === 'rodrigo.yamada@gmail.com'
 
-            if (!userDb || userDb.credits_balance < 15) {
-                throw new Error('Saldo insuficiente! Um parecer profundo consome cerca de 13 Créditos. Você precisará comprar mais Fichas para continuar.')
+            if (!isHardcodedAdmin) {
+                // Verifica créditos ANTES de chamar N8N de forma segura (sem usar o cache do menu)
+                const { data: userDb } = await supabase
+                    .from('app_users')
+                    .select('credits_balance')
+                    .eq('id', user.id)
+                    .single()
+
+                if (!userDb || userDb.credits_balance < 15) {
+                    throw new Error('Saldo insuficiente! Um parecer profundo consome cerca de 13 Créditos. Você precisará comprar mais Fichas para continuar.')
+                }
             }
 
             // Zera o conteúdo no banco para o polling funcionar corretamente se for a segunda vez
