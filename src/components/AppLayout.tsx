@@ -253,7 +253,7 @@ export default function AppLayout() {
             {/* ── Footer full-width ── */}
             <footer className="w-full flex-shrink-0 bg-[#0F2942] py-2.5 px-6 flex justify-center items-center gap-2 z-10">
                 <div className="text-white/70 text-xs tracking-wide">
-                    Tribunal de Contas da União
+                    © 2026 TechDocsTCU · Sistema Protegido
                 </div>
                 <div className="text-white/30 text-[11px] font-mono">
                     v1.0
