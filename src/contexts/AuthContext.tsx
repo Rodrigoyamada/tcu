@@ -15,7 +15,7 @@ interface AuthContextType {
     user: User | null
     login: (email: string, password: string) => Promise<void>
     logout: () => void
-    register: (email: string, name: string, password: string, cpf: string, telefone: string) => Promise<void>
+    register: (email: string, name: string, password: string, telefone: string) => Promise<void>
     updateProfile: (data: Partial<User>) => void
 }
 
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('acordeon_user', JSON.stringify(loggedUser))
     }, [])
 
-    const register = useCallback(async (email: string, name: string, password: string, cpf: string, telefone: string) => {
+    const register = useCallback(async (email: string, name: string, password: string, telefone: string) => {
         // Bloqueia e-mail do admin
         if (email.toLowerCase() === ADMIN_EMAIL) {
             throw new Error('Este e-mail já está em uso.')
@@ -94,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: name.trim(),
             password,
             role: 'user',
-            cpf: cpf.trim(),
             telefone: telefone.trim(),
         })
 

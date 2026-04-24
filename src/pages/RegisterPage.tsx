@@ -5,14 +5,6 @@ import { useAuth } from '../contexts/AuthContext'
 import logoImage from '../assets/logo.png'
 
 // ── Máscaras ──────────────────────────────────────────────────
-function maskCPF(v: string) {
-    return v.replace(/\D/g, '')
-        .slice(0, 11)
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-}
-
 function maskTelefone(v: string) {
     return v.replace(/\D/g, '')
         .slice(0, 11)
@@ -33,7 +25,6 @@ export default function RegisterPage() {
     const navigate = useNavigate()
 
     const [name, setName]           = useState('')
-    const [cpf, setCpf]             = useState('')
     const [email, setEmail]         = useState('')
     const [telefone, setTelefone]   = useState('')
     const [password, setPassword]   = useState('')
@@ -49,12 +40,8 @@ export default function RegisterPage() {
         e.preventDefault()
         setError('')
 
-        if (!name.trim() || !cpf || !email || !telefone || !password || !confirm) {
+        if (!name.trim() || !email || !telefone || !password || !confirm) {
             setError('Preencha todos os campos.')
-            return
-        }
-        if (cpf.replace(/\D/g, '').length !== 11) {
-            setError('CPF inválido. Digite os 11 dígitos.')
             return
         }
         if (!senhaOk) {
@@ -68,7 +55,7 @@ export default function RegisterPage() {
 
         setLoading(true)
         try {
-            await register(email, name, password, cpf, telefone)
+            await register(email, name, password, telefone)
             setSuccess(true)
             setTimeout(() => navigate('/'), 2500)
         } catch (err: unknown) {
@@ -118,21 +105,6 @@ export default function RegisterPage() {
                                     value={name}
                                     onChange={e => setName(e.target.value)}
                                     placeholder="João da Silva"
-                                    className={inputClass}
-                                    disabled={loading}
-                                />
-                            </div>
-
-                            {/* CPF */}
-                            <div className="flex items-center gap-3">
-                                <label htmlFor="cpf" className="w-28 flex-shrink-0 text-sm font-medium text-slate-700 text-right">CPF</label>
-                                <input
-                                    id="cpf"
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={cpf}
-                                    onChange={e => setCpf(maskCPF(e.target.value))}
-                                    placeholder="000.000.000-00"
                                     className={inputClass}
                                     disabled={loading}
                                 />

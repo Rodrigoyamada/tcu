@@ -92,7 +92,7 @@ AS $$
             || ' (TCU, ' || COALESCE(j.orgao,'Plenário') || ') [Jurisprudência Selecionada]'
 
           ELSE
-            'Jurisprudência Selecionada – TCU, ' || COALESCE(j.orgao,'') ||
+            'Jurisprudência Selecionada (ID: ' || COALESCE((regexp_match(j.numero, '(\d+)$'))[1], 'Sem Nº') || ') – TCU, ' || COALESCE(j.orgao,'') ||
             COALESCE(' (' || extract(year from j.data_pub)::text || ')', '')
         END
 
