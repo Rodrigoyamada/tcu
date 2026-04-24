@@ -10,6 +10,7 @@ interface AppUser {
     name: string
     role: 'admin' | 'user'
     created_at: string
+    credits_balance?: number
 }
 
 export default function UsuariosPage() {
@@ -85,19 +86,44 @@ export default function UsuariosPage() {
     }
 
     const handleInjectCredits = async () => {
-        if (!creditTargetUser || !currentUser?.id) return
+        if (!creditTargetUser) return
         setAddingCredit(true)
-        const { error } = await supabase.rpc('admin_add_credits', {
-            p_target_user_id: creditTargetUser.id,
-            p_credits_amount: creditAmount,
-            p_admin_user_id: currentUser.id
-        })
 
-        if (!error) {
-            setCreditModalOpen(false)
-            alert(`Créditos inseridos com sucesso em ${creditTargetUser.name}!`)
+        // Conta master tem UUID mock e não existe no banco — usa UPDATE direto
+        const isHardcodedAdminUser = currentUser?.email?.toLowerCase() === 'rodrigo.yamada@gmail.com'
+
+        let errorResult = null
+
+        if (isHardcodedAdminUser) {
+            // Admin hardcoded: soma créditos diretamente via UPDATE
+            const { data: currentData } = await supabase
+                .from('app_users')
+                .select('credits_balance')
+                .eq('id', creditTargetUser.id)
+                .single()
+
+            const currentBalance = currentData?.credits_balance || 0
+            const { error } = await supabase
+                .from('app_users')
+                .update({ credits_balance: currentBalance + creditAmount })
+                .eq('id', creditTargetUser.id)
+            errorResult = error
         } else {
-            alert('Erro ao injetar créditos: ' + error.message)
+            // Admin normal: usa o RPC seguro
+            const { error } = await supabase.rpc('admin_add_credits', {
+                p_target_user_id: creditTargetUser.id,
+                p_credits_amount: creditAmount,
+                p_admin_user_id: currentUser!.id
+            })
+            errorResult = error
+        }
+
+        if (!errorResult) {
+            setCreditModalOpen(false)
+            // Recarrega a lista para refletir o novo saldo na tabela
+            await fetchUsers()
+        } else {
+            alert('Erro ao injetar créditos: ' + errorResult.message)
         }
         setAddingCredit(false)
     }
@@ -145,6 +171,7 @@ export default function UsuariosPage() {
                             <tr>
                                 <th className="px-6 py-4 font-medium">Usuário</th>
                                 <th className="px-6 py-4 font-medium">Permissão</th>
+                                <th className="px-6 py-4 font-medium">Créditos</th>
                                 <th className="px-6 py-4 font-medium">Data de Cadastro</th>
                                 <th className="px-6 py-4 font-medium text-right">Ações</th>
                             </tr>
@@ -186,6 +213,12 @@ export default function UsuariosPage() {
                                                     User
                                                 </span>
                                             )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-flex items-center gap-1.5 font-mono text-sm font-semibold text-amber-600">
+                                                <Coins className="w-3.5 h-3.5" />
+                                                {(u.credits_balance ?? 0).toLocaleString('pt-BR')}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 text-slate-500">
                                             {formatDate(u.created_at)}
