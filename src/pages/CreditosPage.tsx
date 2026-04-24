@@ -81,7 +81,7 @@ export default function CreditosPage() {
                             <p className="text-5xl font-bold tracking-tight">
                                 {user?.credits_balance?.toLocaleString('pt-BR') || 0}
                             </p>
-                            <p className="text-blue-100 text-sm mt-2 opacity-80">(~{(user?.credits_balance || 0)/14 | 0} pareceres disponíveis, média)</p>
+                            <p className="text-blue-100 text-sm mt-2 opacity-80">créditos disponíveis</p>
                         </div>
                     </div>
 
@@ -90,21 +90,10 @@ export default function CreditosPage() {
                         <h3 className="font-bold text-[#1F4E79] mb-4 flex items-center gap-2">
                             <ShoppingCart size={18}/> Comprar mais Créditos
                         </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button onClick={handleBuyCredits} className="border-2 border-slate-100 hover:border-amber-400 p-5 rounded-xl transition-all group flex flex-col gap-2 items-center text-center">
-                                <span className="text-3xl">🪙</span>
-                                <span className="font-bold text-slate-700 group-hover:text-amber-600 transition-colors">Pacote Básico</span>
-                                <span className="text-xs text-slate-500">1.000 Créditos</span>
-                                <span className="mt-2 bg-slate-100 group-hover:bg-amber-100 text-slate-600 group-hover:text-amber-800 font-bold px-3 py-1 rounded-full text-xs">R$ 50,00</span>
-                            </button>
-                            
-                            <button onClick={handleBuyCredits} className="border-2 border-slate-100 hover:border-amber-400 relative overflow-hidden p-5 rounded-xl transition-all group flex flex-col gap-2 items-center text-center">
-                                <div className="absolute top-0 w-full bg-amber-400 text-amber-900 text-[9px] font-bold py-0.5 uppercase tracking-wider">Mais Popular</div>
-                                <span className="text-3xl mt-3">💰</span>
-                                <span className="font-bold text-slate-700 group-hover:text-amber-600 transition-colors">Pacote Profissional</span>
-                                <span className="text-xs text-slate-500">5.000 Créditos</span>
-                                <span className="mt-2 bg-slate-100 group-hover:bg-amber-100 text-slate-600 group-hover:text-amber-800 font-bold px-3 py-1 rounded-full text-xs">R$ 200,00</span>
-                            </button>
+                        <div className="flex flex-col items-center justify-center gap-3 py-8 text-slate-400">
+                            <Coins className="w-10 h-10 text-amber-300" />
+                            <p className="font-semibold text-slate-600">Planos de créditos em breve</p>
+                            <p className="text-sm text-center text-slate-400">Em breve você poderá adquirir pacotes de créditos diretamente por aqui.</p>
                         </div>
                     </div>
                 </div>
