@@ -1,0 +1,17 @@
+{
+  "name": "Restaurar Citacoes",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "var parecer = $('AI Agent').first().json.output || '';\nvar mapaRaw = $('Formatar Contexto').first().json.mapa_aliases || '{}';\nvar mapa = JSON.parse(mapaRaw);\n\nObject.keys(mapa).forEach(function(alias) {\n  parecer = parecer.split(alias).join(mapa[alias]);\n});\n\nreturn [{ json: { output: parecer } }];"
+      },
+      "id": "restaurar-citacoes-001",
+      "name": "Restaurar Citacoes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {},
+  "pinData": {}
+}

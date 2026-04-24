@@ -1,0 +1,36 @@
+{
+  "name": "Nó Cobrar Fichas TCU",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yojodrqykuhytdemmrsr.supabase.co/rest/v1/rpc/consume_tokens",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "COLE_SUA_CHAVE_AQUI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer COLE_SUA_CHAVE_AQUI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"p_user_id\": \"{{ $('Webhook').item.json.body.user_id }}\",\n  \"p_raw_tokens\": {{ $json.usage.total_tokens || 14000 }},\n  \"p_parecer_id\": \"{{ $('Webhook').item.json.body.parecer_id }}\"\n}"
+      },
+      "id": "270ca8c0-8d59-4581-9b6b-4e0ca2b17a12",
+      "name": "Cobrar Fichas/Tokens",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        250,
+        250
+      ]
+    }
+  ],
+  "connections": {}
+}
