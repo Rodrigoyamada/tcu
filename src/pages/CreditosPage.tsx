@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Coins, History, CreditCard, AlertCircle, ShoppingCart, Loader2, Zap } from 'lucide-react'
+import { Coins, History, CreditCard, AlertCircle, ShoppingCart, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
