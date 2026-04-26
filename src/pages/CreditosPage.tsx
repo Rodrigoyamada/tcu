@@ -92,15 +92,15 @@ export default function CreditosPage() {
                             Meus Créditos
                         </h1>
                         <p className="text-slate-500 mt-2">
-                            Acompanhe o seu consumo da Inteligência Artificial e adicione mais fichas
+                            Acompanhe o seu consumo da Inteligência Artificial e adicione mais créditos
                         </p>
                     </div>
                 </div>
 
                 {/* Dashboard grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {/* Saldo Atual */}
-                    <div className="bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between">
+                    <div className="lg:col-span-1 bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between">
                         <div className="flex items-center gap-2 text-blue-200">
                             <CreditCard size={18} />
                             <span className="font-semibold tracking-wide uppercase text-xs">Seu Saldo Restante</span>
@@ -114,9 +114,9 @@ export default function CreditosPage() {
                     </div>
 
                     {/* Loja de Créditos */}
-                    <div className="md:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
+                    <div className="lg:col-span-3 xl:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
                         <h3 className="font-bold text-[#1F4E79] mb-4 flex items-center gap-2">
-                            <ShoppingCart size={18}/> Comprar mais Fichas
+                            <ShoppingCart size={18}/> Comprar mais Créditos
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                             {[
@@ -129,7 +129,7 @@ export default function CreditosPage() {
                                     <div>
                                         {plan.popular && <span className="bg-amber-400 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full mb-2 inline-block">Mais Popular</span>}
                                         <h4 className="font-bold text-slate-800 text-lg">{plan.name}</h4>
-                                        <div className="flex items-center gap-1 mt-2 mb-1 text-slate-700 font-semibold"><Coins size={16} className="text-amber-500"/> {plan.credits} {plan.isEnterprise ? '' : 'fichas'}</div>
+                                        <div className="flex items-center gap-1 mt-2 mb-1 text-slate-700 font-semibold"><Coins size={16} className="text-amber-500"/> {plan.credits} {plan.isEnterprise ? '' : 'créditos'}</div>
                                         <p className="text-xs text-slate-500">{plan.docs}</p>
                                     </div>
                                     <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
