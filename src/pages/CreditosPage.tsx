@@ -60,7 +60,7 @@ export default function CreditosPage() {
                 body: JSON.stringify({
                     user_id: user.id,
                     user_email: user.email,
-                    user_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'Usuário TechDocsTCU',
+                    user_name: (user as any).full_name ?? (user as any).user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Usuário TechDocsTCU',
                     amount: price,
                     credits: amount
                 })
