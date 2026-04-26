@@ -79,7 +79,8 @@ export default function CreditosPage() {
                         </div>
                         <div className="mt-8 mb-4">
                             <p className="text-5xl font-bold tracking-tight">
-                                {user?.credits_balance?.toLocaleString('pt-BR') || 0}
+                                {/* {user?.credits_balance?.toLocaleString('pt-BR') || 0} */}
+                                -
                             </p>
                             <p className="text-blue-100 text-sm mt-2 opacity-80">créditos disponíveis</p>
                         </div>
@@ -121,7 +122,8 @@ export default function CreditosPage() {
                                         <p className="text-xs text-slate-400">{new Date(entry.created_at).toLocaleString('pt-BR')}</p>
                                     </div>
                                     <div className={`font-mono font-bold text-lg ${entry.amount > 0 ? 'text-emerald-500' : 'text-slate-600'}`}>
-                                        {entry.amount > 0 ? '+' : ''}{entry.amount}
+                                        {/* {entry.amount > 0 ? '+' : ''}{entry.amount} */}
+                                        -
                                     </div>
                                 </div>
                             ))}
