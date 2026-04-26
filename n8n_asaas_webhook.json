@@ -1,0 +1,104 @@
+{
+  "name": "Asaas - Webhook Pagamento (TechDocsTCU)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "asaas-confirmacao",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook Asaas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [ 200, 300 ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [],
+          "number": [],
+          "string": [
+            {
+              "value1": "={{ $json.body.event }}",
+              "operation": "equal",
+              "value2": "PAYMENT_RECEIVED"
+            },
+            {
+              "value1": "={{ $json.body.event }}",
+              "operation": "equal",
+              "value2": "PAYMENT_CONFIRMED"
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "id": "2",
+      "name": "Verificar Pagamento",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1.0,
+      "position": [ 420, 300 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const external = $input.item.json.body.payment.externalReference;\nif (!external || !external.includes('|')) {\n  throw new Error(\"externalReference inv\\u00e1lida ou vazia\");\n}\n\nconst parts = external.split('|');\nreturn {\n  userId: parts[0],\n  credits: parseInt(parts[1], 10),\n  paymentId: $input.item.json.body.payment.id\n};"
+      },
+      "id": "3",
+      "name": "Extrair ID do Usuário",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1.0,
+      "position": [ 640, 280 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://jwotcafdvczoistjnqqn.supabase.co/rest/v1/rpc/add_credits",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SUA_CHAVE_SUPABASE_AQUI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer SUA_CHAVE_SUPABASE_AQUI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "p_user_id", "value": "={{ $json.userId }}" },
+            { "name": "p_amount", "value": "={{ $json.credits }}" },
+            { "name": "p_description", "value": "={{ 'Compra de pacote via Asaas. Ref: ' + $json.paymentId }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4",
+      "name": "Injetar Créditos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [ 860, 280 ]
+    }
+  ],
+  "connections": {
+    "Webhook Asaas": {
+      "main": [
+        [ { "node": "Verificar Pagamento", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Verificar Pagamento": {
+      "main": [
+        [ { "node": "Extrair ID do Usuário", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Extrair ID do Usuário": {
+      "main": [
+        [ { "node": "Injetar Créditos", "type": "main", "index": 0 } ]
+      ]
+    }
+  }
+}

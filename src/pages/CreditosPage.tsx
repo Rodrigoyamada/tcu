@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Coins, History, CreditCard, AlertCircle, ShoppingCart } from 'lucide-react'
+import { Coins, History, CreditCard, AlertCircle, ShoppingCart, Loader2, Zap } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -48,8 +48,36 @@ export default function CreditosPage() {
         fetchLedger()
     }, [user?.id, updateProfile])
 
-    const handleBuyCredits = () => {
-        alert("Integração com gateway de pagamentos (Stripe/Asaas) em breve!")
+    const [buying, setBuying] = useState<number | null>(null)
+
+    const handleBuyCredits = async (amount: number, price: number) => {
+        if (!user) return
+        setBuying(amount)
+        try {
+            const response = await fetch('https://n8n.srv1291896.hstgr.cloud/webhook/criar-cobranca-asaas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    user_email: user.email,
+                    user_name: user.full_name || user.email?.split('@')[0] || 'Usuário TechDocsTCU',
+                    amount: price,
+                    credits: amount
+                })
+            })
+            
+            const data = await response.json()
+            if (data.invoiceUrl) {
+                window.open(data.invoiceUrl, '_blank')
+            } else {
+                alert('Erro ao gerar cobrança. Tente novamente.')
+            }
+        } catch (error) {
+            console.error('Erro na compra:', error)
+            alert('Erro de conexão com o servidor de pagamentos.')
+        } finally {
+            setBuying(null)
+        }
     }
 
     return (
@@ -79,22 +107,42 @@ export default function CreditosPage() {
                         </div>
                         <div className="mt-8 mb-4">
                             <p className="text-5xl font-bold tracking-tight">
-                                {/* {user?.credits_balance?.toLocaleString('pt-BR') || 0} */}
-                                -
+                                {user?.credits_balance?.toLocaleString('pt-BR') || 0}
                             </p>
                             <p className="text-blue-100 text-sm mt-2 opacity-80">créditos disponíveis</p>
                         </div>
                     </div>
 
-                    {/* Lojas de Créditos Mockups */}
+                    {/* Loja de Créditos */}
                     <div className="md:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                         <h3 className="font-bold text-[#1F4E79] mb-4 flex items-center gap-2">
-                            <ShoppingCart size={18}/> Comprar mais Créditos
+                            <ShoppingCart size={18}/> Comprar mais Fichas
                         </h3>
-                        <div className="flex flex-col items-center justify-center gap-3 py-8 text-slate-400">
-                            <Coins className="w-10 h-10 text-amber-300" />
-                            <p className="font-semibold text-slate-600">Planos de créditos em breve</p>
-                            <p className="text-sm text-center text-slate-400">Em breve você poderá adquirir pacotes de créditos diretamente por aqui.</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[
+                                { credits: 100, price: 20, popular: false },
+                                { credits: 500, price: 80, popular: true },
+                                { credits: 1000, price: 140, popular: false }
+                            ].map((plan) => (
+                                <div key={plan.credits} className={`border rounded-xl p-4 flex flex-col justify-between ${plan.popular ? 'border-amber-400 bg-amber-50/30' : 'border-slate-200 hover:border-blue-300'}`}>
+                                    <div>
+                                        {plan.popular && <span className="bg-amber-400 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full mb-2 inline-block">Mais Popular</span>}
+                                        <h4 className="text-lg font-bold text-slate-700 flex items-center gap-1"><Coins size={16} className="text-amber-500"/> {plan.credits}</h4>
+                                        <p className="text-sm text-slate-500">Fichas de IA</p>
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
+                                        <p className="text-2xl font-bold text-[#1F4E79]">R$ {plan.price},00</p>
+                                        <button 
+                                            onClick={() => handleBuyCredits(plan.credits, plan.price)}
+                                            disabled={buying !== null}
+                                            className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${plan.popular ? 'bg-[#1F4E79] text-white hover:bg-[#153654]' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'} ${buying === plan.credits ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                        >
+                                            {buying === plan.credits ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                                            {buying === plan.credits ? 'Gerando...' : 'Comprar'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -122,8 +170,7 @@ export default function CreditosPage() {
                                         <p className="text-xs text-slate-400">{new Date(entry.created_at).toLocaleString('pt-BR')}</p>
                                     </div>
                                     <div className={`font-mono font-bold text-lg ${entry.amount > 0 ? 'text-emerald-500' : 'text-slate-600'}`}>
-                                        {/* {entry.amount > 0 ? '+' : ''}{entry.amount} */}
-                                        -
+                                        {entry.amount > 0 ? '+' : ''}{entry.amount}
                                     </div>
                                 </div>
                             ))}

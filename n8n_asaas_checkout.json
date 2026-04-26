@@ -1,0 +1,115 @@
+{
+  "name": "Asaas - Criar Cobrança (TechDocsTCU)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "criar-cobranca-asaas",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook Checkout",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [ 200, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sandbox.asaas.com/api/v3/customers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmU5MzI5Y2MzLThjODMtNDNkMC05MDhiLTZmYWViNWMxZTQ2OTo6JGFhY2hfMTNiNmY1MTktOTVmMy00ZTE2LWJkYzMtYWU0OWUxZjM5NmU2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "name", "value": "={{ $json.body.user_name }}" },
+            { "name": "email", "value": "={{ $json.body.user_email }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2",
+      "name": "Criar/Buscar Cliente Asaas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [ 420, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sandbox.asaas.com/api/v3/payments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmU5MzI5Y2MzLThjODMtNDNkMC05MDhiLTZmYWViNWMxZTQ2OTo6JGFhY2hfMTNiNmY1MTktOTVmMy00ZTE2LWJkYzMtYWU0OWUxZjM5NmU2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "customer", "value": "={{ $json.id }}" },
+            { "name": "billingType", "value": "PIX" },
+            { "name": "value", "value": "={{ $('Webhook Checkout').item.json.body.amount }}" },
+            { "name": "dueDate", "value": "={{ $today.plus(2, 'days').format('YYYY-MM-DD') }}" },
+            { "name": "description", "value": "=Compra de {{ $('Webhook Checkout').item.json.body.credits }} Créditos de Inteligência Artificial" },
+            { "name": "externalReference", "value": "={{ $('Webhook Checkout').item.json.body.user_id }}|{{ $('Webhook Checkout').item.json.body.credits }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3",
+      "name": "Gerar Cobrança PIX",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [ 640, 300 ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "invoiceUrl",
+              "name": "invoiceUrl",
+              "value": "={{ $json.invoiceUrl }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4",
+      "name": "Retornar URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [ 860, 300 ]
+    }
+  ],
+  "connections": {
+    "Webhook Checkout": {
+      "main": [
+        [ { "node": "Criar/Buscar Cliente Asaas", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Criar/Buscar Cliente Asaas": {
+      "main": [
+        [ { "node": "Gerar Cobrança PIX", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Gerar Cobrança PIX": {
+      "main": [
+        [ { "node": "Retornar URL", "type": "main", "index": 0 } ]
+      ]
+    }
+  }
+}
