@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Coins, History, CreditCard, AlertCircle, ShoppingCart, Loader2 } from 'lucide-react'
+import { Coins, History, CreditCard, AlertCircle, ShoppingCart, Loader2, Zap } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -114,56 +114,43 @@ export default function CreditosPage() {
                     </div>
 
                     {/* Loja de Créditos */}
-                    <div className="md:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                        <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-2 bg-slate-50">
-                            <ShoppingCart className="text-[#1F4E79] w-5 h-5" />
-                            <h3 className="font-bold text-[#1F4E79]">Comprar mais Fichas</h3>
-                        </div>
-                        <div className="overflow-x-auto p-4">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead>
-                                    <tr className="text-slate-600 border-b border-slate-200">
-                                        <th className="pb-3 px-4 font-semibold">Pacote</th>
-                                        <th className="pb-3 px-4 font-semibold">Créditos</th>
-                                        <th className="pb-3 px-4 font-semibold">Pareceres equivalentes</th>
-                                        <th className="pb-3 px-4 font-semibold">Preço</th>
-                                        <th className="pb-3 px-4 font-semibold">Por crédito</th>
-                                        <th className="pb-3 px-4 font-semibold"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {[
-                                        { name: 'Starter', credits: 75, docs: '~5 pareceres', price: 197, priceLabel: 'R$ 197', pricePerCredit: 'R$ 2,63', isEnterprise: false },
-                                        { name: 'Profissional', credits: 300, docs: '~20 pareceres', price: 597, priceLabel: 'R$ 597', pricePerCredit: 'R$ 1,99', isEnterprise: false },
-                                        { name: 'Institucional', credits: 1500, docs: '~100 pareceres', price: 1997, priceLabel: 'R$ 1.997', pricePerCredit: 'R$ 1,33', isEnterprise: false },
-                                        { name: 'Enterprise', credits: 'Ilimitado/mês', docs: '—', price: 4997, priceLabel: 'R$ 4.997/mês', pricePerCredit: '—', isEnterprise: true }
-                                    ].map((plan) => (
-                                        <tr key={plan.name} className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-4 px-4 font-medium text-slate-800">{plan.name}</td>
-                                            <td className="py-4 px-4 text-slate-600">{typeof plan.credits === 'number' ? `${plan.credits} créditos` : plan.credits}</td>
-                                            <td className="py-4 px-4 text-slate-600">{plan.docs}</td>
-                                            <td className="py-4 px-4 text-slate-800 font-semibold">{plan.priceLabel}</td>
-                                            <td className="py-4 px-4 text-slate-600">{plan.pricePerCredit}</td>
-                                            <td className="py-4 px-4">
-                                                <button 
-                                                    onClick={() => {
-                                                        if (plan.isEnterprise) {
-                                                            alert('Entre em contato com nossa equipe comercial para o plano Enterprise.');
-                                                        } else {
-                                                            handleBuyCredits(plan.credits as number, plan.price);
-                                                        }
-                                                    }}
-                                                    disabled={buying !== null}
-                                                    className={`px-4 py-2 rounded-lg font-semibold text-xs flex items-center justify-center transition-colors ${plan.name === 'Profissional' ? 'bg-[#1F4E79] text-white hover:bg-[#153654]' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'} ${buying === plan.credits ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                                >
-                                                    {buying === plan.credits ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
-                                                    {buying === plan.credits ? 'Gerando...' : (plan.isEnterprise ? 'Falar com Vendas' : 'Comprar')}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <div className="md:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
+                        <h3 className="font-bold text-[#1F4E79] mb-4 flex items-center gap-2">
+                            <ShoppingCart size={18}/> Comprar mais Fichas
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                            {[
+                                { name: 'Starter', credits: 75, docs: '~5 pareceres', price: 197, priceLabel: 'R$ 197', popular: false, isEnterprise: false },
+                                { name: 'Profissional', credits: 300, docs: '~20 pareceres', price: 597, priceLabel: 'R$ 597', popular: true, isEnterprise: false },
+                                { name: 'Institucional', credits: 1500, docs: '~100 pareceres', price: 1997, priceLabel: 'R$ 1.997', popular: false, isEnterprise: false },
+                                { name: 'Enterprise', credits: 'Ilimitado', docs: 'Uso Livre', price: 4997, priceLabel: 'R$ 4.997/mês', popular: false, isEnterprise: true }
+                            ].map((plan) => (
+                                <div key={plan.name} className={`border rounded-xl p-4 flex flex-col justify-between ${plan.popular ? 'border-amber-400 bg-amber-50/30' : 'border-slate-200 hover:border-blue-300'}`}>
+                                    <div>
+                                        {plan.popular && <span className="bg-amber-400 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full mb-2 inline-block">Mais Popular</span>}
+                                        <h4 className="font-bold text-slate-800 text-lg">{plan.name}</h4>
+                                        <div className="flex items-center gap-1 mt-2 mb-1 text-slate-700 font-semibold"><Coins size={16} className="text-amber-500"/> {plan.credits} {plan.isEnterprise ? '' : 'fichas'}</div>
+                                        <p className="text-xs text-slate-500">{plan.docs}</p>
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
+                                        <p className="text-2xl font-bold text-[#1F4E79]">{plan.priceLabel}</p>
+                                        <button 
+                                            onClick={() => {
+                                                if (plan.isEnterprise) {
+                                                    alert('Entre em contato com nossa equipe comercial para o plano Enterprise.');
+                                                } else {
+                                                    handleBuyCredits(plan.credits as number, plan.price);
+                                                }
+                                            }}
+                                            disabled={buying !== null}
+                                            className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${plan.popular ? 'bg-[#1F4E79] text-white hover:bg-[#153654]' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'} ${buying === plan.credits ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                        >
+                                            {buying === plan.credits ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                                            {buying === plan.credits ? 'Gerando...' : (plan.isEnterprise ? 'Vendas' : 'Comprar')}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
