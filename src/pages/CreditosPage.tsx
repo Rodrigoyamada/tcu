@@ -113,7 +113,8 @@ export default function CreditosPage() {
                         </div>
                     </div>
 
-                    {/* Loja de Créditos */}
+                    {/* Loja de Créditos - Oculto temporariamente */}
+                    {false && (
                     <div className="lg:col-span-3 xl:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
                         <h3 className="font-bold text-[#1F4E79] mb-4 flex items-center gap-2">
                             <ShoppingCart size={18}/> Comprar mais Créditos
@@ -153,6 +154,7 @@ export default function CreditosPage() {
                             ))}
                         </div>
                     </div>
+                    )}
                 </div>
 
                 {/* Histórico Ledger */}
