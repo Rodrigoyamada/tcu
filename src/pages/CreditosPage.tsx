@@ -106,10 +106,10 @@ export default function CreditosPage() {
                             <span className="font-semibold tracking-wide uppercase text-xs">Seu Saldo Restante</span>
                         </div>
                         <div className="mt-8 mb-4">
-                            <p className="text-5xl font-bold tracking-tight">
+                            <p className="text-3xl lg:text-4xl font-bold tracking-tight truncate">
                                 {user?.credits_balance?.toLocaleString('pt-BR') || 0}
                             </p>
-                            <p className="text-blue-100 text-sm mt-2 opacity-80">créditos disponíveis</p>
+                            <p className="text-blue-100 text-xs mt-2 opacity-80 truncate">créditos disponíveis</p>
                         </div>
                     </div>
 
