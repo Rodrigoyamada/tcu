@@ -113,18 +113,17 @@ export default function CreditosPage() {
                         </div>
                     </div>
 
-                    {/* Loja de Créditos - Oculto temporariamente */}
-                    {false && (
+                    {/* Loja de Créditos */}
                     <div className="lg:col-span-3 xl:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
                         <h3 className="font-bold text-[#1F4E79] mb-4 flex items-center gap-2">
                             <ShoppingCart size={18}/> Comprar mais Créditos
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                             {[
-                                { name: 'Starter', credits: 75, docs: '~5 pareceres', price: 197, priceLabel: 'R$ 197', popular: false, isEnterprise: false },
-                                { name: 'Profissional', credits: 300, docs: '~20 pareceres', price: 597, priceLabel: 'R$ 597', popular: true, isEnterprise: false },
-                                { name: 'Institucional', credits: 1500, docs: '~100 pareceres', price: 1997, priceLabel: 'R$ 1.997', popular: false, isEnterprise: false },
-                                { name: 'Enterprise', credits: 'Ilimitado', docs: 'Uso Livre', price: 4997, priceLabel: 'R$ 4.997/mês', popular: false, isEnterprise: true }
+                                { name: 'Starter', credits: 75, docs: '~5 pareceres', price: 197, priceLabel: '---', popular: false, isEnterprise: false },
+                                { name: 'Profissional', credits: 300, docs: '~20 pareceres', price: 597, priceLabel: '---', popular: true, isEnterprise: false },
+                                { name: 'Institucional', credits: 1500, docs: '~100 pareceres', price: 1997, priceLabel: '---', popular: false, isEnterprise: false },
+                                { name: 'Enterprise', credits: 'Ilimitado', docs: 'Uso Livre', price: 4997, priceLabel: '---', popular: false, isEnterprise: true }
                             ].map((plan) => (
                                 <div key={plan.name} className={`border rounded-xl p-4 flex flex-col justify-between ${plan.popular ? 'border-amber-400 bg-amber-50/30' : 'border-slate-200 hover:border-blue-300'}`}>
                                     <div>
@@ -154,7 +153,6 @@ export default function CreditosPage() {
                             ))}
                         </div>
                     </div>
-                    )}
                 </div>
 
                 {/* Histórico Ledger */}
