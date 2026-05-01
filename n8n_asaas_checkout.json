@@ -31,7 +31,8 @@
         "bodyParameters": {
           "parameters": [
             { "name": "name", "value": "={{ $json.body.user_name }}" },
-            { "name": "email", "value": "={{ $json.body.user_email }}" }
+            { "name": "email", "value": "={{ $json.body.user_email }}" },
+            { "name": "cpfCnpj", "value": "={{ $json.body.cpfCnpj || '94200638064' }}" }
           ]
         },
         "options": {}
@@ -61,7 +62,7 @@
             { "name": "customer", "value": "={{ $json.id }}" },
             { "name": "billingType", "value": "PIX" },
             { "name": "value", "value": "={{ $('Webhook Checkout').item.json.body.amount }}" },
-            { "name": "dueDate", "value": "={{ $today.plus(2, 'days').format('YYYY-MM-DD') }}" },
+            { "name": "dueDate", "value": "={{ new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0] }}" },
             { "name": "description", "value": "=Compra de {{ $('Webhook Checkout').item.json.body.credits }} Créditos de Inteligência Artificial" },
             { "name": "externalReference", "value": "={{ $('Webhook Checkout').item.json.body.user_id }}|{{ $('Webhook Checkout').item.json.body.credits }}" }
           ]
@@ -76,12 +77,51 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "=https://sandbox.asaas.com/api/v3/payments/{{ $json.id }}/pixQrCode",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmU5MzI5Y2MzLThjODMtNDNkMC05MDhiLTZmYWViNWMxZTQ2OTo6JGFhY2hfMTNiNmY1MTktOTVmMy00ZTE2LWJkYzMtYWU0OWUxZjM5NmU2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5",
+      "name": "Buscar QR Code PIX",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [ 860, 300 ]
+    },
+    {
+      "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "invoiceUrl",
-              "name": "invoiceUrl",
-              "value": "={{ $json.invoiceUrl }}",
+              "id": "qrcode",
+              "name": "encodedImage",
+              "value": "={{ $json.encodedImage }}",
+              "type": "string"
+            },
+            {
+              "id": "payload",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "string"
+            },
+            {
+              "id": "expirationDate",
+              "name": "expirationDate",
+              "value": "={{ $json.expirationDate }}",
+              "type": "string"
+            },
+            {
+              "id": "paymentId",
+              "name": "paymentId",
+              "value": "={{ $('Gerar Cobrança PIX').item.json.id }}",
               "type": "string"
             }
           ]
@@ -89,10 +129,10 @@
         "options": {}
       },
       "id": "4",
-      "name": "Retornar URL",
+      "name": "Retornar QR Code",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
-      "position": [ 860, 300 ]
+      "position": [ 1080, 300 ]
     }
   ],
   "connections": {
@@ -108,7 +148,12 @@
     },
     "Gerar Cobrança PIX": {
       "main": [
-        [ { "node": "Retornar URL", "type": "main", "index": 0 } ]
+        [ { "node": "Buscar QR Code PIX", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Buscar QR Code PIX": {
+      "main": [
+        [ { "node": "Retornar QR Code", "type": "main", "index": 0 } ]
       ]
     }
   }
