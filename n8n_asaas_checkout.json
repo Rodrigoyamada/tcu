@@ -8,11 +8,12 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "1",
-      "name": "Webhook Checkout",
+      "id": "07a4b464-0ff7-4335-a21a-66c154ae45f0",
+      "name": "Webhook Checkout1",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [ 200, 300 ]
+      "position": [ 144, 144 ],
+      "webhookId": "0afb6780-c8d1-44b2-91b8-658ac17454ab"
     },
     {
       "parameters": {
@@ -23,25 +24,25 @@
           "parameters": [
             {
               "name": "access_token",
-              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmU5MzI5Y2MzLThjODMtNDNkMC05MDhiLTZmYWViNWMxZTQ2OTo6JGFhY2hfMTNiNmY1MTktOTVmMy00ZTE2LWJkYzMtYWU0OWUxZjM5NmU2"
+              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmRkYTVkNDQyLTQxOWYtNGIxMC1hMDJkLTM5NDgyYTZmZDcwYzo6JGFhY2hfNTlkMzA2ODUtNzY3Zi00MzY1LWFjNzUtM2QwOGZkNzcyMzFk"
             }
           ]
         },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "name", "value": "={{ $json.body.user_name }}" },
-            { "name": "email", "value": "={{ $json.body.user_email }}" },
-            { "name": "cpfCnpj", "value": "={{ $json.body.cpfCnpj || '94200638064' }}" }
+            { "name": "name",     "value": "={{ $json.body.user_name }}" },
+            { "name": "email",    "value": "={{ $json.body.user_email }}" },
+            { "name": "cpfCnpj", "value": "22825974000147" }
           ]
         },
         "options": {}
       },
-      "id": "2",
-      "name": "Criar/Buscar Cliente Asaas",
+      "id": "ce74043b-b72b-4a6b-8eb8-04e031326c9f",
+      "name": "Criar/Buscar Cliente Asaas1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [ 420, 300 ]
+      "position": [ 368, 144 ]
     },
     {
       "parameters": {
@@ -52,28 +53,28 @@
           "parameters": [
             {
               "name": "access_token",
-              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmU5MzI5Y2MzLThjODMtNDNkMC05MDhiLTZmYWViNWMxZTQ2OTo6JGFhY2hfMTNiNmY1MTktOTVmMy00ZTE2LWJkYzMtYWU0OWUxZjM5NmU2"
+              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmRkYTVkNDQyLTQxOWYtNGIxMC1hMDJkLTM5NDgyYTZmZDcwYzo6JGFhY2hfNTlkMzA2ODUtNzY3Zi00MzY1LWFjNzUtM2QwOGZkNzcyMzFk"
             }
           ]
         },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "customer", "value": "={{ $json.id }}" },
-            { "name": "billingType", "value": "PIX" },
-            { "name": "value", "value": "={{ $('Webhook Checkout').item.json.body.amount }}" },
-            { "name": "dueDate", "value": "={{ new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0] }}" },
-            { "name": "description", "value": "=Compra de {{ $('Webhook Checkout').item.json.body.credits }} Créditos de Inteligência Artificial" },
-            { "name": "externalReference", "value": "={{ $('Webhook Checkout').item.json.body.user_id }}|{{ $('Webhook Checkout').item.json.body.credits }}" }
+            { "name": "customer",          "value": "={{ $json.id }}" },
+            { "name": "billingType",       "value": "PIX" },
+            { "name": "value",             "value": "={{ $('Webhook Checkout1').item.json.body.amount }}" },
+            { "name": "dueDate",           "value": "={{ new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0] }}" },
+            { "name": "description",       "value": "=Compra de {{ $('Webhook Checkout1').item.json.body.credits }} Créditos de Inteligência Artificial" },
+            { "name": "externalReference", "value": "={{ $('Webhook Checkout1').item.json.body.user_id }}|{{ $('Webhook Checkout1').item.json.body.credits }}" }
           ]
         },
         "options": {}
       },
-      "id": "3",
-      "name": "Gerar Cobrança PIX",
+      "id": "00fff462-730b-4fe5-bcee-0b9d5275e49c",
+      "name": "Gerar Cobrança PIX1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [ 640, 300 ]
+      "position": [ 592, 144 ]
     },
     {
       "parameters": {
@@ -84,77 +85,61 @@
           "parameters": [
             {
               "name": "access_token",
-              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmU5MzI5Y2MzLThjODMtNDNkMC05MDhiLTZmYWViNWMxZTQ2OTo6JGFhY2hfMTNiNmY1MTktOTVmMy00ZTE2LWJkYzMtYWU0OWUxZjM5NmU2"
+              "value": "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmRkYTVkNDQyLTQxOWYtNGIxMC1hMDJkLTM5NDgyYTZmZDcwYzo6JGFhY2hfNTlkMzA2ODUtNzY3Zi00MzY1LWFjNzUtM2QwOGZkNzcyMzFk"
             }
           ]
         },
         "options": {}
       },
-      "id": "5",
+      "id": "bqr-001-buscar-qrcode-pix",
       "name": "Buscar QR Code PIX",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [ 860, 300 ]
+      "position": [ 816, 144 ]
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
-            {
-              "id": "qrcode",
-              "name": "encodedImage",
-              "value": "={{ $json.encodedImage }}",
-              "type": "string"
-            },
-            {
-              "id": "payload",
-              "name": "payload",
-              "value": "={{ $json.payload }}",
-              "type": "string"
-            },
-            {
-              "id": "expirationDate",
-              "name": "expirationDate",
-              "value": "={{ $json.expirationDate }}",
-              "type": "string"
-            },
-            {
-              "id": "paymentId",
-              "name": "paymentId",
-              "value": "={{ $('Gerar Cobrança PIX').item.json.id }}",
-              "type": "string"
-            }
+            { "id": "f1", "name": "encodedImage",   "value": "={{ $json.encodedImage }}",                              "type": "string" },
+            { "id": "f2", "name": "payload",         "value": "={{ $json.payload }}",                                   "type": "string" },
+            { "id": "f3", "name": "expirationDate",  "value": "={{ $json.expirationDate }}",                            "type": "string" },
+            { "id": "f4", "name": "paymentId",       "value": "={{ $('Gerar Cobrança PIX1').item.json.id }}",          "type": "string" }
           ]
         },
         "options": {}
       },
-      "id": "4",
-      "name": "Retornar QR Code",
+      "id": "ad052159-3b70-4122-aebd-caf0d9d59beb",
+      "name": "Retornar URL1",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
-      "position": [ 1080, 300 ]
+      "position": [ 1040, 144 ]
     }
   ],
+  "pinData": {},
   "connections": {
-    "Webhook Checkout": {
-      "main": [
-        [ { "node": "Criar/Buscar Cliente Asaas", "type": "main", "index": 0 } ]
-      ]
+    "Webhook Checkout1": {
+      "main": [[ { "node": "Criar/Buscar Cliente Asaas1", "type": "main", "index": 0 } ]]
     },
-    "Criar/Buscar Cliente Asaas": {
-      "main": [
-        [ { "node": "Gerar Cobrança PIX", "type": "main", "index": 0 } ]
-      ]
+    "Criar/Buscar Cliente Asaas1": {
+      "main": [[ { "node": "Gerar Cobrança PIX1", "type": "main", "index": 0 } ]]
     },
-    "Gerar Cobrança PIX": {
-      "main": [
-        [ { "node": "Buscar QR Code PIX", "type": "main", "index": 0 } ]
-      ]
+    "Gerar Cobrança PIX1": {
+      "main": [[ { "node": "Buscar QR Code PIX", "type": "main", "index": 0 } ]]
     },
     "Buscar QR Code PIX": {
-      "main": [
-        [ { "node": "Retornar QR Code", "type": "main", "index": 0 } ]
-      ]
+      "main": [[ { "node": "Retornar URL1", "type": "main", "index": 0 } ]]
     }
-  }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "473537df-864e-4fc5-9a5f-513110cd35e1",
+  "meta": {
+    "instanceId": "659c10ce91dda1bd1762bb0a7ad98f5737c2d03166dda8d31d013fa0439a9286"
+  },
+  "id": "Y_Kg1xMSCRe2eeXfJmqsY",
+  "tags": []
 }
