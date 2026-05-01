@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
     Coins, History, CreditCard, AlertCircle, ShoppingCart,
     Loader2, Zap, Copy, CheckCheck, X, QrCode, Clock,
@@ -9,12 +9,16 @@ import { useAuth } from '../contexts/AuthContext'
 
 interface LedgerEntry { id: string; amount: number; description: string; created_at: string }
 
-type Step = 'method' | 'loading' | 'pix' | 'card_form' | 'card_loading' | 'result'
+type Step = 'method' | 'loading' | 'pix' | 'card_form' | 'card_loading' | 'polling' | 'result' | 'timeout'
 
 interface PixResult { encodedImage: string; payload: string; expirationDate: string; paymentId: string }
 interface CardResult { status: string; paymentId: string }
 
 interface SelectedPlan { name: string; credits: number; price: number }
+
+const CONFIRMED_STATUSES = ['CONFIRMED', 'RECEIVED']
+const POLL_INTERVAL_MS = 4000
+const POLL_MAX_ATTEMPTS = 30 // 30 × 4s = 2 minutos
 
 export default function CreditosPage() {
     const { user, updateProfile } = useAuth()
@@ -23,6 +27,8 @@ export default function CreditosPage() {
     const [selectedPlan, setSelectedPlan] = useState<SelectedPlan | null>(null)
     const [step, setStep] = useState<Step>('method')
     const [pixResult, setPixResult] = useState<PixResult | null>(null)
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const pollCountRef = useRef(0)
     const [cardResult, setCardResult] = useState<CardResult | null>(null)
     const [copied, setCopied] = useState(false)
     const [apiError, setApiError] = useState('')
@@ -53,7 +59,45 @@ export default function CreditosPage() {
         setCardForm({ holderName: '', number: '', expiryMonth: '', expiryYear: '', ccv: '', cpfCnpj: '', postalCode: '', addressNumber: '', phone: '' })
     }
 
-    const closeModal = () => { setSelectedPlan(null); fetchLedger() }
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+        pollCountRef.current = 0
+    }, [])
+
+    const closeModal = () => { stopPolling(); setSelectedPlan(null); fetchLedger() }
+
+    // Limpa polling ao desmontar
+    useEffect(() => () => stopPolling(), [stopPolling])
+
+    const startPolling = useCallback((paymentId: string, credits: number) => {
+        pollCountRef.current = 0
+        setStep('polling')
+
+        pollRef.current = setInterval(async () => {
+            pollCountRef.current += 1
+
+            if (pollCountRef.current > POLL_MAX_ATTEMPTS) {
+                stopPolling()
+                setStep('timeout')
+                return
+            }
+
+            try {
+                const res = await fetch(`/api/checkout-status?paymentId=${paymentId}`)
+                const data = await res.json()
+
+                if (CONFIRMED_STATUSES.includes(data.status)) {
+                    stopPolling()
+                    setCardResult({ status: data.status, paymentId })
+                    setStep('result')
+                    fetchLedger() // atualiza saldo
+                }
+                // outros status (PENDING, AWAITING_RISK_ANALYSIS) → continua polling
+            } catch {
+                // erro de rede, tenta novamente na próxima iteração
+            }
+        }, POLL_INTERVAL_MS)
+    }, [stopPolling, fetchLedger])
 
     const handleSelectPix = async () => {
         if (!selectedPlan || !user) return
@@ -95,8 +139,14 @@ export default function CreditosPage() {
             const data = await res.json()
             if (!data.success) { setApiError(data.error ?? 'Erro ao processar cartão.'); setStep('card_form'); return }
             setCardResult(data)
-            setStep('result')
-        } catch { setApiError('Erro de conexão.'); setStep('card_form') }
+            // Se já veio confirmado (raro, mas possível)
+            if (CONFIRMED_STATUSES.includes(data.status)) {
+                setStep('result')
+                fetchLedger()
+            } else {
+                // Inicia polling para aguardar confirmação
+                startPolling(data.paymentId, selectedPlan.credits)
+            }
     }
 
     const handleCopy = () => {
@@ -328,23 +378,40 @@ export default function CreditosPage() {
                             </div>
                         )}
 
-                        {/* PASSO 3 — Resultado do Cartão */}
+                        {/* PASSO 2e — Polling: aguardando confirmação */}
+                        {step === 'polling' && (
+                            <div className="p-10 flex flex-col items-center gap-4">
+                                <div className="relative">
+                                    <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-[#1F4E79] animate-spin" />
+                                    <CreditCard className="absolute inset-0 m-auto text-[#1F4E79] w-7 h-7" />
+                                </div>
+                                <p className="text-slate-700 font-bold text-lg">Aguardando confirmação</p>
+                                <p className="text-slate-500 text-sm text-center">Seu pagamento está em análise antifraude.<br/>Avisaremos assim que for aprovado!</p>
+                                <div className="flex gap-1 mt-2">
+                                    {[0,1,2].map(i => (
+                                        <div key={i} className="w-2 h-2 bg-[#1F4E79] rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PASSO 3 — Aprovado */}
                         {step === 'result' && cardResult && (
                             <div className="p-6 flex flex-col items-center gap-4">
-                                {cardResult.status === 'CONFIRMED' || cardResult.status === 'RECEIVED' ? (
-                                    <>
-                                        <div className="bg-emerald-50 rounded-full p-4"><CheckCircle2 className="text-emerald-500 w-16 h-16" /></div>
-                                        <p className="font-bold text-xl text-slate-800">Pagamento Aprovado!</p>
-                                        <p className="text-slate-500 text-sm text-center">Seus <strong>{selectedPlan.credits} créditos</strong> já foram adicionados à sua conta.</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="bg-amber-50 rounded-full p-4"><Clock className="text-amber-500 w-16 h-16" /></div>
-                                        <p className="font-bold text-xl text-slate-800">Pagamento em Análise</p>
-                                        <p className="text-slate-500 text-sm text-center">Seu pagamento está sendo processado. Os créditos serão liberados em breve.</p>
-                                    </>
-                                )}
+                                <div className="bg-emerald-50 rounded-full p-4"><CheckCircle2 className="text-emerald-500 w-16 h-16" /></div>
+                                <p className="font-bold text-xl text-slate-800">Pagamento Aprovado!</p>
+                                <p className="text-slate-500 text-sm text-center">Seus <strong>{selectedPlan?.credits} créditos</strong> foram adicionados à sua conta.</p>
                                 <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-[#1F4E79] text-white font-semibold hover:bg-[#153654] transition-colors">Fechar</button>
+                            </div>
+                        )}
+
+                        {/* PASSO 3b — Timeout */}
+                        {step === 'timeout' && (
+                            <div className="p-6 flex flex-col items-center gap-4">
+                                <div className="bg-amber-50 rounded-full p-4"><Clock className="text-amber-500 w-16 h-16" /></div>
+                                <p className="font-bold text-xl text-slate-800">Pagamento Recebido</p>
+                                <p className="text-slate-500 text-sm text-center">A análise está demorando mais que o normal. Seus créditos serão liberados automaticamente assim que confirmado pelo banco.</p>
+                                <button onClick={closeModal} className="w-full py-2.5 rounded-xl bg-[#1F4E79] text-white font-semibold hover:bg-[#153654] transition-colors">Entendido</button>
                             </div>
                         )}
                     </div>
