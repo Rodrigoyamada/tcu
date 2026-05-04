@@ -69,7 +69,7 @@ export default function CreditosPage() {
     // Limpa polling ao desmontar
     useEffect(() => () => stopPolling(), [stopPolling])
 
-    const startPolling = useCallback((paymentId: string, credits: number, changeStepTo?: Step) => {
+    const startPolling = useCallback((paymentId: string, _credits: number, changeStepTo?: Step) => {
         pollCountRef.current = 0
         if (changeStepTo) {
             setStep(changeStepTo)
