@@ -114,13 +114,21 @@ export default function CreditosPage() {
                     amount: selectedPlan.price, credits: selectedPlan.credits, paymentMethod: 'PIX',
                 }),
             })
+            if (!res.ok) {
+                const txt = await res.text()
+                throw new Error(`Erro do servidor (${res.status}): ${txt.slice(0, 50)}`)
+            }
             const data = await res.json()
             if (!data.success) { setApiError(data.error ?? 'Erro ao gerar PIX.'); setStep('method'); return }
             setPixResult(data)
             setStep('pix')
             // Inicia o polling para verificar se o PIX foi pago
             startPolling(data.paymentId, selectedPlan.credits)
-        } catch { setApiError('Erro de conexão.'); setStep('method') }
+        } catch (error: any) { 
+            console.error("Erro no checkout:", error);
+            setApiError('Falha: ' + (error.message || 'Erro de conexão. Verifique se o servidor local está rodando.')); 
+            setStep('method') 
+        }
     }
 
     const handlePayCard = async () => {
@@ -139,6 +147,10 @@ export default function CreditosPage() {
                     creditCardHolderInfo: { name: cardForm.holderName, cpfCnpj: cardForm.cpfCnpj, postalCode: cardForm.postalCode, addressNumber: cardForm.addressNumber, phone: cardForm.phone },
                 }),
             })
+            if (!res.ok) {
+                const txt = await res.text()
+                throw new Error(`Erro do servidor (${res.status}): ${txt.slice(0, 50)}`)
+            }
             const data = await res.json()
             if (!data.success) { setApiError(data.error ?? 'Erro ao processar cartão.'); setStep('card_form'); return }
             setCardResult(data)
@@ -150,8 +162,9 @@ export default function CreditosPage() {
                 // Inicia polling para aguardar confirmação
                 startPolling(data.paymentId, selectedPlan.credits)
             }
-        } catch { 
-            setApiError('Erro de conexão com servidor.'); 
+        } catch (error: any) { 
+            console.error("Erro no cartão:", error);
+            setApiError('Falha: ' + (error.message || 'Erro de conexão com servidor.')); 
             setStep('card_form') 
         }
     }
