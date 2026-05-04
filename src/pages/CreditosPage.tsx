@@ -90,7 +90,8 @@ export default function CreditosPage() {
                     stopPolling()
                     setCardResult({ status: data.status, paymentId })
                     setStep('result')
-                    fetchLedger() // atualiza saldo
+                    // Dá 3 segundos para o N8n/Supabase processarem o Webhook
+                    setTimeout(() => fetchLedger(), 3000)
                 }
                 // outros status (PENDING, AWAITING_RISK_ANALYSIS) → continua polling
             } catch {
@@ -117,6 +118,8 @@ export default function CreditosPage() {
             if (!data.success) { setApiError(data.error ?? 'Erro ao gerar PIX.'); setStep('method'); return }
             setPixResult(data)
             setStep('pix')
+            // Inicia o polling para verificar se o PIX foi pago
+            startPolling(data.paymentId, selectedPlan.credits)
         } catch { setApiError('Erro de conexão.'); setStep('method') }
     }
 
@@ -142,11 +145,15 @@ export default function CreditosPage() {
             // Se já veio confirmado (raro, mas possível)
             if (CONFIRMED_STATUSES.includes(data.status)) {
                 setStep('result')
-                fetchLedger()
+                setTimeout(() => fetchLedger(), 3000)
             } else {
                 // Inicia polling para aguardar confirmação
                 startPolling(data.paymentId, selectedPlan.credits)
             }
+        } catch { 
+            setApiError('Erro de conexão com servidor.'); 
+            setStep('card_form') 
+        }
     }
 
     const handleCopy = () => {
@@ -315,7 +322,10 @@ export default function CreditosPage() {
                                         <Clock size={14} /><span>Válido até: {new Date(pixResult.expirationDate).toLocaleString('pt-BR')}</span>
                                     </div>
                                 )}
-                                <p className="text-slate-400 text-xs text-center">Após confirmação, seus créditos serão adicionados automaticamente.</p>
+                                <div className="flex items-center gap-3 mt-2 bg-blue-50/50 px-4 py-3 rounded-xl w-full justify-center">
+                                    <Loader2 className="w-4 h-4 text-[#1F4E79] animate-spin" />
+                                    <p className="text-slate-600 text-xs font-semibold">Aguardando pagamento do PIX...</p>
+                                </div>
                             </div>
                         )}
 
