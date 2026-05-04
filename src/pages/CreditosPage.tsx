@@ -69,9 +69,11 @@ export default function CreditosPage() {
     // Limpa polling ao desmontar
     useEffect(() => () => stopPolling(), [stopPolling])
 
-    const startPolling = useCallback((paymentId: string, credits: number) => {
+    const startPolling = useCallback((paymentId: string, credits: number, changeStepTo?: Step) => {
         pollCountRef.current = 0
-        setStep('polling')
+        if (changeStepTo) {
+            setStep(changeStepTo)
+        }
 
         pollRef.current = setInterval(async () => {
             pollCountRef.current += 1
@@ -160,7 +162,7 @@ export default function CreditosPage() {
                 setTimeout(() => fetchLedger(), 3000)
             } else {
                 // Inicia polling para aguardar confirmação
-                startPolling(data.paymentId, selectedPlan.credits)
+                startPolling(data.paymentId, selectedPlan.credits, 'polling')
             }
         } catch (error: any) { 
             console.error("Erro no cartão:", error);
