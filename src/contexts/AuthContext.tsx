@@ -80,14 +80,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let mounted = true;
 
         const initSession = async () => {
+            console.log('[Auth] Iniciando getSession...')
+            let done = false;
+            const failsafe = setTimeout(() => {
+                if (!done && mounted) {
+                    console.error('[Auth] Failsafe ativado: getSession travou!')
+                    setLoading(false)
+                }
+            }, 3000);
+
             try {
                 const { data: { session } } = await supabase.auth.getSession();
+                console.log('[Auth] getSession retornou:', session ? 'Sessão encontrada' : 'Sem sessão')
                 if (session?.user && mounted) {
+                    console.log('[Auth] Carregando perfil do usuário...')
                     await loadUserProfile(session.user.id, session.user.email!);
+                    console.log('[Auth] Perfil carregado com sucesso.')
                 }
             } catch (err) {
                 console.error("Erro no getSession:", err);
             } finally {
+                done = true;
+                clearTimeout(failsafe);
                 if (mounted) setLoading(false);
             }
         };
