@@ -267,7 +267,9 @@ export default function CreditosPage() {
                             {history.map((entry) => (
                                 <div key={entry.id} className="p-4 px-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-700">{entry.description}</p>
+                                        <p className="text-sm font-semibold text-slate-700">
+                                            {entry.description.replace(/ via Asaas.*/, '')}
+                                        </p>
                                         <p className="text-xs text-slate-400">{new Date(entry.created_at).toLocaleString('pt-BR')}</p>
                                     </div>
                                     <div className={`font-mono font-bold text-lg ${entry.amount > 0 ? 'text-emerald-500' : 'text-slate-600'}`}>
