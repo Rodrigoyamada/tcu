@@ -6,6 +6,7 @@ import { AdminRoute } from './components/AdminRoute'
 import AppLayout from './components/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import PoliticaPrivacidadePage from './pages/PoliticaPrivacidadePage'
 import TermosDeUsoPage from './pages/TermosDeUsoPage'
 import { Loader2 } from 'lucide-react'
@@ -44,6 +45,7 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<LoginPage />} />
             <Route path="/cadastro" element={<RegisterPage />} />
+            <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
             <Route path="/politica-de-privacidade" element={<PoliticaPrivacidadePage />} />
             <Route path="/termos-de-uso" element={<TermosDeUsoPage />} />
 

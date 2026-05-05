@@ -85,8 +85,8 @@ export default function AppLayout() {
         }
     }, [user])
 
-    const handleLogout = () => {
-        logout()
+    const handleLogout = async () => {
+        await logout()
         navigate('/')
     }
 
