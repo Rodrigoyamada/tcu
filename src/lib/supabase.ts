@@ -3,8 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Storage customizado para desviar do bug de Web Locks (Deadlock) do Supabase
+const customStorage = {
+  getItem: (key: string) => window.localStorage.getItem(key),
+  setItem: (key: string, value: string) => window.localStorage.setItem(key, value),
+  removeItem: (key: string) => window.localStorage.removeItem(key)
+}
 
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: customStorage,
+    storageKey: 'techdocstcu-auth-token'
+  }
+})
 // ─── Categorias do TCU (Dados Abertos) ──────────────────────────────────────
 // Ref: https://sites.tcu.gov.br/dados-abertos/jurisprudencia/
 export type CategoriaTCU =
