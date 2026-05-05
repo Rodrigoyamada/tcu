@@ -13,7 +13,9 @@ const customStorage = {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: customStorage,
-    storageKey: 'techdocstcu-auth-token'
+    storageKey: 'techdocstcu-auth-token',
+    // Bypassa o Web Locks API do navegador que causa deadlock no Chrome ao recarregar
+    lock: (_name: string, _timeout: number, fn: () => Promise<unknown>) => fn() as any,
   }
 })
 // ─── Categorias do TCU (Dados Abertos) ──────────────────────────────────────
