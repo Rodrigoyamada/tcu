@@ -201,7 +201,6 @@ export default function CreditosPage() {
                     <h1 className="text-3xl font-bold text-[#1F4E79] flex items-center gap-3">
                         <Coins className="text-amber-500 w-8 h-8" /> Meus Créditos
                     </h1>
-                    <p className="text-slate-500 mt-2">Acompanhe o seu consumo e adicione mais créditos</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6">
