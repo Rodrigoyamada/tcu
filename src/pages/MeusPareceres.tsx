@@ -29,7 +29,7 @@ export default function MeusPareceres() {
             const { data, error } = await supabase
                 .from('pareceres')
                 .select('id, title, description, content, created_at')
-                .eq('user_id', user.email)
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
             if (!error && data) setPareceres(data as Parecer[])
             setLoading(false)

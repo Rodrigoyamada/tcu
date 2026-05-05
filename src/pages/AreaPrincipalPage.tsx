@@ -40,7 +40,7 @@ export default function AreaPrincipalPage() {
                 .eq('id', id)
 
             if (user.role !== 'admin') {
-                query = query.eq('user_id', user.email)
+                query = query.eq('user_id', user.id)
             }
 
             const { data, error } = await query.single()
@@ -395,7 +395,7 @@ export default function AreaPrincipalPage() {
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    const isReadOnly = parecer?.user_id !== user?.email
+    const isReadOnly = parecer?.user_id !== user?.id
 
     return (
         <div className="h-full flex flex-col">
