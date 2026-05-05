@@ -209,7 +209,7 @@ export default function CreditosPage() {
                     <div className="lg:col-span-1 bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] rounded-2xl p-6 text-white shadow-lg flex flex-col min-h-[160px]">
                         <div className="flex items-center justify-center gap-2 text-blue-200">
                             <CreditCard size={16} />
-                            <span className="font-semibold tracking-wide uppercase text-[10px]">Saldo Restante</span>
+                            <span className="font-semibold tracking-wide uppercase text-[10px] whitespace-nowrap">Saldo Restante</span>
                         </div>
                         <div className="flex-1 flex flex-col items-center justify-center mt-4">
                             <p className="text-3xl font-bold tracking-tight truncate">{user?.credits_balance?.toLocaleString('pt-BR') || 0}</p>
