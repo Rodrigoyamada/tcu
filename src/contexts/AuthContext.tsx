@@ -182,10 +182,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             redirectTo: redirectUrl,
         })
         if (error) {
-            if (error.message?.includes('rate limit')) {
-                throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.')
+            if (error.message?.includes('rate limit') || error.message?.includes('Email rate limit')) {
+                throw new Error('Limite de e-mails atingido. Aguarde alguns minutos e tente novamente.')
             }
-            throw new Error('Erro ao enviar e-mail. Verifique o endereço e tente novamente.')
+            // Expõe o erro real para diagnóstico (pode ser removido em produção)
+            throw new Error(error.message || 'Erro ao enviar e-mail. Tente novamente.')
         }
     }, [])
 
