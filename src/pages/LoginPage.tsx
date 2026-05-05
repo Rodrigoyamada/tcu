@@ -144,10 +144,15 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                {/* Badge */}
-                <p className="text-center text-white/50 text-xs mt-6">
-                    © 2026 TechDocsTCU · Sistema Protegido
-                </p>
+                {/* Badge + Legal links */}
+                <div className="text-center mt-6 space-y-2">
+                    <p className="text-white/50 text-xs">© 2026 TechDocsTCU · Sistema Protegido</p>
+                    <div className="flex items-center justify-center gap-3 text-xs text-white/40">
+                        <Link to="/termos-de-uso" className="hover:text-white/70 transition-colors">Termos de Uso</Link>
+                        <span>·</span>
+                        <Link to="/politica-de-privacidade" className="hover:text-white/70 transition-colors">Privacidade</Link>
+                    </div>
+                </div>
             </div>
         </div>
     )

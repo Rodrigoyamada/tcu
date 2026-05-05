@@ -33,6 +33,7 @@ export default function RegisterPage() {
     const [loading, setLoading]     = useState(false)
     const [error, setError]         = useState('')
     const [success, setSuccess]     = useState(false)
+    const [termsAccepted, setTermsAccepted] = useState(false)
 
     const senhaOk = criterios.every(c => c.test(password))
 
@@ -42,6 +43,10 @@ export default function RegisterPage() {
 
         if (!name.trim() || !email || !telefone || !password || !confirm) {
             setError('Preencha todos os campos.')
+            return
+        }
+        if (!termsAccepted) {
+            setError('Você deve aceitar os Termos de Uso e a Política de Privacidade para continuar.')
             return
         }
         if (!senhaOk) {
@@ -198,6 +203,23 @@ export default function RegisterPage() {
                                 />
                             </div>
 
+                            {/* Aceite de Termos */}
+                            <label className="flex items-start gap-2.5 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    checked={termsAccepted}
+                                    onChange={e => setTermsAccepted(e.target.checked)}
+                                    className="mt-0.5 w-4 h-4 rounded accent-[#1F4E79] flex-shrink-0"
+                                />
+                                <span className="text-xs text-slate-500 leading-relaxed">
+                                    Li e concordo com os{' '}
+                                    <Link to="/termos-de-uso" target="_blank" className="text-[#2E75B6] hover:underline font-semibold">Termos de Uso</Link>
+                                    {' '}e a{' '}
+                                    <Link to="/politica-de-privacidade" target="_blank" className="text-[#2E75B6] hover:underline font-semibold">Política de Privacidade</Link>
+                                    {' '}do TechDocsTCU.
+                                </span>
+                            </label>
+
                             {/* Erro */}
                             {error && (
                                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
@@ -227,9 +249,14 @@ export default function RegisterPage() {
                     )}
                 </div>
 
-                <p className="text-center text-white/50 text-xs mt-6">
-                    © 2026 TechDocsTCU · Sistema Protegido
-                </p>
+                <div className="text-center mt-6 space-y-2">
+                    <p className="text-white/50 text-xs">© 2026 TechDocsTCU · Sistema Protegido</p>
+                    <div className="flex items-center justify-center gap-3 text-xs text-white/40">
+                        <Link to="/termos-de-uso" className="hover:text-white/70 transition-colors">Termos de Uso</Link>
+                        <span>·</span>
+                        <Link to="/politica-de-privacidade" className="hover:text-white/70 transition-colors">Privacidade</Link>
+                    </div>
+                </div>
             </div>
         </div>
     )

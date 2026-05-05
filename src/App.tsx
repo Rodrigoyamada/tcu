@@ -6,6 +6,8 @@ import { AdminRoute } from './components/AdminRoute'
 import AppLayout from './components/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import PoliticaPrivacidadePage from './pages/PoliticaPrivacidadePage'
+import TermosDeUsoPage from './pages/TermosDeUsoPage'
 import { Loader2 } from 'lucide-react'
 
 // Lazy loaded pages to reduce initial bundle size
@@ -42,6 +44,8 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<LoginPage />} />
             <Route path="/cadastro" element={<RegisterPage />} />
+            <Route path="/politica-de-privacidade" element={<PoliticaPrivacidadePage />} />
+            <Route path="/termos-de-uso" element={<TermosDeUsoPage />} />
 
             {/* Protected */}
             <Route element={<PrivateRoute />}>
