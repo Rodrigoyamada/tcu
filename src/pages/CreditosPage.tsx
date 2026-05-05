@@ -206,14 +206,14 @@ export default function CreditosPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {/* Saldo */}
-                    <div className="lg:col-span-1 bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between">
-                        <div className="flex items-center gap-2 text-blue-200">
+                    <div className="lg:col-span-1 bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] rounded-2xl p-6 text-white shadow-lg flex flex-col min-h-[160px]">
+                        <div className="flex items-center justify-center gap-2 text-blue-200">
                             <CreditCard size={16} />
                             <span className="font-semibold tracking-wide uppercase text-[10px]">Seu Saldo Restante</span>
                         </div>
-                        <div className="mt-8 mb-4">
-                            <p className="text-2xl font-bold tracking-tight truncate">{user?.credits_balance?.toLocaleString('pt-BR') || 0}</p>
-                            <p className="text-blue-100 text-[10px] mt-2 opacity-80 truncate">créditos disponíveis</p>
+                        <div className="flex-1 flex flex-col items-center justify-center mt-4">
+                            <p className="text-5xl font-bold tracking-tight truncate">{user?.credits_balance?.toLocaleString('pt-BR') || 0}</p>
+                            <p className="text-blue-200 text-xs mt-2 opacity-90 truncate">créditos disponíveis</p>
                         </div>
                     </div>
 
