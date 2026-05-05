@@ -105,13 +105,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [loadUserProfile])
 
     const login = useCallback(async (email: string, password: string) => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        console.log('[Auth] Iniciando signInWithPassword...');
+        
+        // Timeout de 15 segundos para evitar travamento infinito
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tempo limite excedido ao conectar com o servidor.')), 15000)
+        );
+
+        const authPromise = supabase.auth.signInWithPassword({ email, password });
+        
+        const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
+
+        console.log('[Auth] Resposta do signInWithPassword:', { error });
+        
         if (error) {
-            if (error.message.includes('Invalid login credentials')) {
+            if (error.message?.includes('Invalid login credentials')) {
                 throw new Error('E-mail ou senha inválidos.')
             }
-            throw new Error('Erro ao autenticar. Tente novamente.')
+            throw new Error(error.message || 'Erro ao autenticar. Tente novamente.')
         }
+        
+        console.log('[Auth] Login bem-sucedido. Aguardando perfil...');
+        // Dá 1 segundo para o onAuthStateChange carregar o perfil antes de resolver
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('[Auth] Redirecionando...');
     }, [])
 
     const register = useCallback(async (email: string, name: string, password: string, telefone: string) => {
