@@ -181,12 +181,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const forgotPassword = useCallback(async (email: string) => {
-        // URL hardcoded em https para garantir correspondência com a whitelist do Supabase
         const redirectUrl = 'https://techdocstcu.netlify.app/redefinir-senha'
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: redirectUrl,
         })
-        if (error) throw new Error(error.message || 'Erro ao enviar e-mail de recuperação.')
+        if (error) {
+            if (error.message?.includes('rate limit')) {
+                throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.')
+            }
+            throw new Error('Erro ao enviar e-mail. Verifique o endereço e tente novamente.')
+        }
     }, [])
 
     const logout = useCallback(async () => {
