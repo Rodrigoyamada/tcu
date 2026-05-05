@@ -77,31 +77,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [])
 
     useEffect(() => {
-        // Carrega sessão existente ao iniciar
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            try {
-                if (session?.user) {
-                    await loadUserProfile(session.user.id, session.user.email!)
-                }
-            } finally {
-                setLoading(false)
-            }
-        })
+        let mounted = true;
 
-        // Escuta mudanças de autenticação em tempo real
+        // Escuta mudanças de autenticação em tempo real (incluindo INITIAL_SESSION)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!mounted) return;
+            
             try {
-                if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+                if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
                     await loadUserProfile(session.user.id, session.user.email!)
-                } else if (event === 'SIGNED_OUT') {
+                } else if (event === 'SIGNED_OUT' || (!session && event === 'INITIAL_SESSION')) {
                     setUser(null)
                 }
+            } catch (err) {
+                console.error("Erro no onAuthStateChange:", err)
             } finally {
-                setLoading(false)
+                if (mounted) setLoading(false)
             }
         })
 
-        return () => subscription.unsubscribe()
+        return () => {
+            mounted = false;
+            subscription.unsubscribe()
+        }
     }, [loadUserProfile])
 
     const login = useCallback(async (email: string, password: string) => {
