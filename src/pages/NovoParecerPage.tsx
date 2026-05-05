@@ -24,7 +24,7 @@ export default function NovoParecerPage() {
         const { data, error: dbError } = await supabase
             .from('pareceres')
             .insert({
-                user_id: user?.email,
+                user_id: user?.id,
                 title: title.trim(),
                 description: description.trim() || null,
             })
