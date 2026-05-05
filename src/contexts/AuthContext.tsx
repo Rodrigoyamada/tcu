@@ -112,6 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!mounted) return;
             if (event === 'INITIAL_SESSION') return; // Já lidamos com isso no getSession
             
+            // Não interfere no fluxo de redefinição de senha
+            if (window.location.pathname === '/redefinir-senha') return;
+
             try {
                 if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
                     await loadUserProfile(session.user.id, session.user.email!)
@@ -178,8 +181,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const forgotPassword = useCallback(async (email: string) => {
+        // URL hardcoded em https para garantir correspondência com a whitelist do Supabase
+        const redirectUrl = 'https://techdocstcu.netlify.app/redefinir-senha'
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/redefinir-senha`,
+            redirectTo: redirectUrl,
         })
         if (error) throw new Error('Erro ao enviar e-mail de recuperação. Verifique o endereço e tente novamente.')
     }, [])

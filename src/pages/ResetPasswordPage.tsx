@@ -25,11 +25,26 @@ export default function ResetPasswordPage() {
     const senhaOk = criterios.every(c => c.test(password))
 
     useEffect(() => {
-        // O Supabase redireciona com tokens na URL — ele mesmo cuida da sessão
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) setValidSession(true)
+        // getSession() NÃO processa o hash da URL com token de recovery.
+        // Apenas o onAuthStateChange captura o evento PASSWORD_RECOVERY corretamente.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'PASSWORD_RECOVERY' && session) {
+                setValidSession(true)
+            }
+            // Também aceita se já há sessão ativa (raro, mas possível)
+            if (event === 'SIGNED_IN' && session) {
+                setValidSession(true)
+            }
             setChecking(false)
         })
+
+        // Timeout de segurança: se o evento nunca chegar, não fica carregando pra sempre
+        const timeout = setTimeout(() => setChecking(false), 5000)
+
+        return () => {
+            subscription.unsubscribe()
+            clearTimeout(timeout)
+        }
     }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
