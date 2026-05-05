@@ -42,10 +42,11 @@ export default function CreditosPage() {
         setLoading(true)
         const { data: userDb } = await supabase.from('app_users').select('credits_balance').eq('id', user.id).single()
         if (userDb) updateProfile({ credits_balance: userDb.credits_balance })
-        // Traz apenas as recargas/compras (onde amount é maior que zero)
+        // Traz apenas as compras via Asaas (onde amount é maior que zero e a descrição começa com Compra)
         const { data, error } = await supabase.from('token_ledger').select('id, amount, description, created_at')
             .eq('user_id', user.id)
             .gt('amount', 0)
+            .ilike('description', 'Compra%')
             .order('created_at', { ascending: false }).limit(20)
         
         if (error) {
