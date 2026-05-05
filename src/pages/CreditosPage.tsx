@@ -42,8 +42,16 @@ export default function CreditosPage() {
         setLoading(true)
         const { data: userDb } = await supabase.from('app_users').select('credits_balance').eq('id', user.id).single()
         if (userDb) updateProfile({ credits_balance: userDb.credits_balance })
-        const { data } = await supabase.from('token_ledger').select('id, amount, description, created_at')
-            .eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)
+        // Traz apenas as recargas/compras (onde amount é maior que zero)
+        const { data, error } = await supabase.from('token_ledger').select('id, amount, description, created_at')
+            .eq('user_id', user.id)
+            .gt('amount', 0)
+            .order('created_at', { ascending: false }).limit(20)
+        
+        if (error) {
+            console.error("Erro ao buscar extrato:", error)
+        }
+        
         if (data) setHistory(data)
         setLoading(false)
     }, [user?.id, updateProfile])
@@ -245,7 +253,7 @@ export default function CreditosPage() {
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-2 bg-slate-50">
                         <History className="text-[#1F4E79] w-5 h-5" />
-                        <h2 className="font-bold text-[#1F4E79]">Extrato de Consumo</h2>
+                        <h2 className="font-bold text-[#1F4E79]">Histórico de Compras</h2>
                     </div>
                     {loading ? (
                         <div className="p-10 flex justify-center"><div className="w-8 h-8 border-2 border-[#2E75B6] border-t-transparent rounded-full animate-spin" /></div>
