@@ -37,23 +37,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true)
 
     const loadUserProfile = useCallback(async (userId: string, email: string) => {
-        const { data } = await supabase
-            .from('app_users')
-            .select('*')
-            .eq('id', userId)
-            .single()
+        try {
+            const { data, error } = await supabase
+                .from('app_users')
+                .select('*')
+                .eq('id', userId)
+                .single()
 
-        if (data) {
-            setUser({
-                id: data.id,
-                email: data.email || email,
-                name: data.name || email,
-                initials: getInitials(data.name || email),
-                role: data.role as 'admin' | 'user',
-                credits_balance: data.credits_balance ?? 0,
-            })
-        } else {
-            // Perfil ainda não existe (pode acontecer em race condition com o trigger)
+            if (data && !error) {
+                setUser({
+                    id: data.id,
+                    email: data.email || email,
+                    name: data.name || email,
+                    initials: getInitials(data.name || email),
+                    role: data.role as 'admin' | 'user',
+                    credits_balance: data.credits_balance ?? 0,
+                })
+            } else {
+                setUser({
+                    id: userId,
+                    email: email,
+                    name: email.split('@')[0],
+                    initials: email[0].toUpperCase(),
+                    role: 'user',
+                    credits_balance: 0,
+                })
+            }
+        } catch (err) {
+            console.error('Falha ao carregar perfil:', err)
             setUser({
                 id: userId,
                 email: email,
@@ -68,20 +79,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         // Carrega sessão existente ao iniciar
         supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (session?.user) {
-                await loadUserProfile(session.user.id, session.user.email!)
+            try {
+                if (session?.user) {
+                    await loadUserProfile(session.user.id, session.user.email!)
+                }
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         })
 
         // Escuta mudanças de autenticação em tempo real
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-                await loadUserProfile(session.user.id, session.user.email!)
-            } else if (event === 'SIGNED_OUT') {
-                setUser(null)
+            try {
+                if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+                    await loadUserProfile(session.user.id, session.user.email!)
+                } else if (event === 'SIGNED_OUT') {
+                    setUser(null)
+                }
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         })
 
         return () => subscription.unsubscribe()
