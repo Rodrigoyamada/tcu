@@ -79,20 +79,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         let mounted = true;
 
-        // Escuta mudanças de autenticação em tempo real (incluindo INITIAL_SESSION)
+        const initSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user && mounted) {
+                    await loadUserProfile(session.user.id, session.user.email!);
+                }
+            } catch (err) {
+                console.error("Erro no getSession:", err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
+        initSession();
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
+            if (event === 'INITIAL_SESSION') return; // Já lidamos com isso no getSession
             
             try {
-                if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+                if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
                     await loadUserProfile(session.user.id, session.user.email!)
-                } else if (event === 'SIGNED_OUT' || (!session && event === 'INITIAL_SESSION')) {
+                } else if (event === 'SIGNED_OUT') {
                     setUser(null)
                 }
             } catch (err) {
                 console.error("Erro no onAuthStateChange:", err)
-            } finally {
-                if (mounted) setLoading(false)
             }
         })
 

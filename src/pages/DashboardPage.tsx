@@ -22,13 +22,13 @@ export default function DashboardPage() {
                 const { count: totalCount } = await supabase
                     .from('pareceres')
                     .select('*', { count: 'exact', head: true })
-                    .eq('user_id', user.email)
+                    .eq('user_id', user.id)
 
                 // 2. Fetch count of processed pareceres
                 const { count: processedCount } = await supabase
                     .from('pareceres')
                     .select('*', { count: 'exact', head: true })
-                    .eq('user_id', user.email)
+                    .eq('user_id', user.id)
                     .not('content', 'is', null)
 
                 const total = totalCount || 0
@@ -39,7 +39,7 @@ export default function DashboardPage() {
                 const { data, error } = await supabase
                     .from('pareceres')
                     .select('id, title, description, content, created_at')
-                    .eq('user_id', user.email)
+                    .eq('user_id', user.id)
                     .order('created_at', { ascending: false })
                     .limit(5)
                 
