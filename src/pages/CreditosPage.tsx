@@ -212,7 +212,7 @@ export default function CreditosPage() {
                             <span className="font-semibold tracking-wide uppercase text-[10px]">Seu Saldo Restante</span>
                         </div>
                         <div className="flex-1 flex flex-col items-center justify-center mt-4">
-                            <p className="text-5xl font-bold tracking-tight truncate">{user?.credits_balance?.toLocaleString('pt-BR') || 0}</p>
+                            <p className="text-3xl font-bold tracking-tight truncate">{user?.credits_balance?.toLocaleString('pt-BR') || 0}</p>
                             <p className="text-blue-200 text-xs mt-2 opacity-90 truncate">créditos disponíveis</p>
                         </div>
                     </div>
