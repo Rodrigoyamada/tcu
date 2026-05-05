@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: redirectUrl,
         })
-        if (error) throw new Error('Erro ao enviar e-mail de recuperação. Verifique o endereço e tente novamente.')
+        if (error) throw new Error(error.message || 'Erro ao enviar e-mail de recuperação.')
     }, [])
 
     const logout = useCallback(async () => {
