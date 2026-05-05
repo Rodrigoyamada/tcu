@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, CheckCircle2, Mail } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Mail } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import logoImage from '../assets/logo2.png'
 
