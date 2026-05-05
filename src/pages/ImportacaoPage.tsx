@@ -636,8 +636,12 @@ export default function ImportacaoPage() {
 
         setStep('importing')
         setImportError('')
-        const BATCH_SIZE = 200
+        // Acórdãos têm campos HTML gigantes (RELATORIO, VOTO, ACORDAO) — lotes menores evitam timeout
+        const BATCH_SIZE = (categoria === 'acordao') ? 30 : 150
+        // Limite de tamanho do payload por lote (~4MB) — evita rejeição pelo PostgREST
+        const MAX_BATCH_BYTES = 4 * 1024 * 1024
         let batch: any[] = []
+        let batchBytes = 0
         let processedCount = 0
         let errorsCount = 0
         const ext = file.name.split('.').pop()?.toLowerCase()
@@ -659,21 +663,19 @@ export default function ImportacaoPage() {
 
         const insertBatch = async () => {
             if (batch.length === 0) return
-            // Usa upsert com ignoreDuplicates — ignora silenciosamente linhas com 'numero' repetido
-            // Requer o índice único idx_jurisprudencia_numero_unique (já existe no banco)
             const { error } = await supabase.from('jurisprudencia').upsert(batch, {
                 onConflict: 'numero',
                 ignoreDuplicates: true
             })
             if (error) {
                 console.error('Erro no lote:', error)
-                // Mostra o erro do PRIMEIRO lote para diagnóstico
-                if (errorsCount === 0) {
-                    alert('DIAGNÓSTICO - Erro no 1º lote:\nCode: ' + error.code + '\nMsg: ' + error.message + '\nDetails: ' + error.details)
-                }
                 errorsCount += batch.length
+                // Mostra erro real na tela (não alert) para diagnóstico
+                const msg = `Erro no lote (${processedCount}–${processedCount + batch.length}): [${error.code}] ${error.message}${ error.details ? ' | ' + error.details : ''}`
+                setImportError(msg)
             }
             processedCount += batch.length
+            batchBytes = 0
             setProgress(p => ({ 
                 ...p, 
                 done: processedCount, 
@@ -681,7 +683,7 @@ export default function ImportacaoPage() {
                 errors: errorsCount 
             }))
             batch = []
-            if (processedCount % 2000 === 0) {
+            if (processedCount % 1000 === 0) {
                 await supabase.from('importacoes').update({ linha_atual: processedCount }).eq('id', importId)
             }
         }
@@ -746,7 +748,11 @@ export default function ImportacaoPage() {
                 rec['metadata'] = extraMeta
             }
 
-            if (hasData) batch.push(rec)
+            if (hasData) {
+                batch.push(rec)
+                // Estimativa de bytes do registro para controle de payload
+                batchBytes += JSON.stringify(rec).length
+            }
         }
 
         if (ext === 'csv' || ext === 'txt') {
@@ -808,7 +814,7 @@ export default function ImportacaoPage() {
                                             row[csvHeaders[j]] = currentRow[j] ?? ''
                                         }
                                         processRow(row)
-                                        if (batch.length >= BATCH_SIZE) {
+                                        if (batch.length >= BATCH_SIZE || batchBytes >= MAX_BATCH_BYTES) {
                                             // Pausa para inserir (aguarda Promise antes de continuar)
                                             inQuoteState = localInQuote
                                             leftover = text.slice(i + 1)
@@ -888,7 +894,7 @@ export default function ImportacaoPage() {
                 
                 for (const row of fullData) {
                     processRow(row)
-                    if (batch.length >= BATCH_SIZE) await insertBatch()
+                    if (batch.length >= BATCH_SIZE || batchBytes >= MAX_BATCH_BYTES) await insertBatch()
                 }
                 await insertBatch()
                 await supabase.from('importacoes').update({ status: 'concluido', total_linhas: processedCount, linha_atual: processedCount, fim_em: new Date().toISOString() }).eq('id', importId)
