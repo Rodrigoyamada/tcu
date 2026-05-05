@@ -78,59 +78,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         let mounted = true;
+        let profileLoaded = false; // flag para evitar duplo carregamento
 
-        const initSession = async () => {
-            console.log('[Auth] Iniciando getSession...')
-            let done = false;
-            const failsafe = setTimeout(() => {
-                if (!done && mounted) {
-                    console.error('[Auth] Failsafe ativado: getSession travou!')
-                    setLoading(false)
-                }
-            }, 3000);
-
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                console.log('[Auth] getSession retornou:', session ? 'Sessão encontrada' : 'Sem sessão')
-                if (session?.user && mounted) {
-                    console.log('[Auth] Carregando perfil do usuário...')
-                    await loadUserProfile(session.user.id, session.user.email!);
-                    console.log('[Auth] Perfil carregado com sucesso.')
-                }
-            } catch (err) {
-                console.error("Erro no getSession:", err);
-            } finally {
-                done = true;
-                clearTimeout(failsafe);
-                if (mounted) setLoading(false);
-            }
-        };
-
-        initSession();
+        // Failsafe: se nada responder em 4s, libera o loading
+        const failsafe = setTimeout(() => {
+            if (mounted) setLoading(false);
+        }, 4000);
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
-            if (event === 'INITIAL_SESSION') return; // Já lidamos com isso no getSession
-            
+
             // Não interfere no fluxo de redefinição de senha
             if (window.location.pathname === '/redefinir-senha') return;
 
             try {
-                if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-                    await loadUserProfile(session.user.id, session.user.email!)
+                if (event === 'INITIAL_SESSION') {
+                    // Carrega perfil uma única vez na inicialização
+                    if (session?.user && !profileLoaded) {
+                        profileLoaded = true;
+                        await loadUserProfile(session.user.id, session.user.email!);
+                    }
+                    clearTimeout(failsafe);
+                    if (mounted) setLoading(false);
+
+                } else if (event === 'SIGNED_IN' && session?.user) {
+                    // Login do usuário — carrega perfil (sem delay)
+                    await loadUserProfile(session.user.id, session.user.email!);
+
+                } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+                    // Refresh silencioso — não recarrega o perfil para não causar flicker
+                    // só atualiza se não há user carregado ainda
+                    if (!profileLoaded) {
+                        profileLoaded = true;
+                        await loadUserProfile(session.user.id, session.user.email!);
+                    }
+
                 } else if (event === 'SIGNED_OUT') {
-                    setUser(null)
+                    setUser(null);
+                    profileLoaded = false;
                 }
             } catch (err) {
-                console.error("Erro no onAuthStateChange:", err)
+                console.error('[Auth] Erro no onAuthStateChange:', err);
+                if (mounted) setLoading(false);
             }
-        })
+        });
 
         return () => {
             mounted = false;
-            subscription.unsubscribe()
-        }
-    }, [loadUserProfile])
+            clearTimeout(failsafe);
+            subscription.unsubscribe();
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const login = useCallback(async (email: string, password: string) => {
         console.log('[Auth] Iniciando signInWithPassword...');
@@ -153,10 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error(error.message || 'Erro ao autenticar. Tente novamente.')
         }
         
-        console.log('[Auth] Login bem-sucedido. Aguardando perfil...');
-        // Dá 1 segundo para o onAuthStateChange carregar o perfil antes de resolver
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('[Auth] Redirecionando...');
+        // onAuthStateChange (SIGNED_IN) vai carregar o perfil automaticamente
     }, [])
 
     const register = useCallback(async (email: string, name: string, password: string, telefone: string) => {
