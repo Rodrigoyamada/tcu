@@ -190,18 +190,9 @@ export default function AdminDashboardPage() {
                 countQuery('legislacao')
             ])
 
-            // Fallback se RPC falhar (muito comum em migrations não aplicadas)
+            // Fallback se RPC falhar (retorna vazio em vez de baixar o banco)
             let dbSummary: CategoryStat[] = []
-            if (categoriesRaw.error) {
-                const { data } = await supabase.from('jurisprudencia').select('tipo')
-                if (data) {
-                    const counts = data.reduce((acc: any, curr) => {
-                        acc[curr.tipo] = (acc[curr.tipo] || 0) + 1
-                        return acc
-                    }, {})
-                    dbSummary = Object.entries(counts).map(([tipo, count]) => ({ tipo, count: count as number }))
-                }
-            } else if (categoriesRaw.data) {
+            if (categoriesRaw.data) {
                 dbSummary = categoriesRaw.data as CategoryStat[]
             }
 
